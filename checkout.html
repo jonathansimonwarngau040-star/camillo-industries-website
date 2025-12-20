@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bestellung - Camillo Industries</title>
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- PayPal SDK (optional - nur wenn PayPal Client ID konfiguriert ist) -->
+    <!-- <script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=EUR"></script> -->
+    
+    <!-- Stripe.js (optional - nur wenn Stripe konfiguriert ist) -->
+    <!-- <script src="https://js.stripe.com/v3/"></script> -->
 </head>
 <body>
     <header id="mainHeader">
@@ -165,100 +174,12 @@
         </div>
     </footer>
 
+    <!-- Konfiguration laden (muss vor checkout.js geladen werden) -->
+    <script src="config.js"></script>
+    
+    <!-- Hauptskripte -->
     <script src="script.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Load selected color from localStorage
-            const selectedColor = localStorage.getItem('selectedColor') || 'orange';
-            const selectedImage = localStorage.getItem('selectedImage') || 'orange.png';
-            
-            if (selectedImage) {
-                document.getElementById('summaryImage').src = selectedImage;
-            }
-            
-            // Update color text
-            const colorNames = {
-                'orange': 'Orange',
-                'blau': 'Blau',
-                'gelb': 'Gelb',
-                'grau': 'Grau',
-                'grün': 'Grün',
-                'pink': 'Pink',
-                'rot': 'Rot',
-                'schwarz': 'Schwarz',
-                'weiß': 'Weiß'
-            };
-            document.getElementById('summaryColor').textContent = 'Farbe: ' + colorNames[selectedColor];
-
-            // Payment method toggle
-            const paypalRadio = document.getElementById('paypal');
-            const creditCardRadio = document.getElementById('creditcard');
-            const creditCardFields = document.getElementById('creditCardFields');
-
-            paypalRadio.addEventListener('change', function() {
-                if (this.checked) {
-                    creditCardFields.style.display = 'none';
-                }
-            });
-
-            creditCardRadio.addEventListener('change', function() {
-                if (this.checked) {
-                    creditCardFields.style.display = 'block';
-                }
-            });
-
-            // Credit card number formatting
-            const cardNumberInput = document.getElementById('cardNumber');
-            if (cardNumberInput) {
-                cardNumberInput.addEventListener('input', function(e) {
-                    let value = e.target.value.replace(/\s/g, '');
-                    let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
-                    e.target.value = formattedValue;
-                });
-            }
-
-            // Card expiry formatting
-            const cardExpiryInput = document.getElementById('cardExpiry');
-            if (cardExpiryInput) {
-                cardExpiryInput.addEventListener('input', function(e) {
-                    let value = e.target.value.replace(/\D/g, '');
-                    if (value.length >= 2) {
-                        value = value.substring(0, 2) + '/' + value.substring(2, 4);
-                    }
-                    e.target.value = value;
-                });
-            }
-
-            // Form submission
-            const checkoutForm = document.getElementById('checkoutForm');
-            checkoutForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                // Here you would normally send the data to your payment processor
-                // For now, we'll just redirect to the thank you page
-                
-                // Store order data (in production, this would go to your backend)
-                const formData = new FormData(checkoutForm);
-                const quantity = parseInt(localStorage.getItem('quantity')) || 1;
-                const totalPrice = parseFloat(localStorage.getItem('totalPrice')) || 9.99;
-                const orderData = {
-                    name: formData.get('name'),
-                    email: formData.get('email'),
-                    address: formData.get('street') + ', ' + formData.get('zip') + ' ' + formData.get('city'),
-                    payment: formData.get('payment'),
-                    color: localStorage.getItem('selectedColor') || 'orange',
-                    quantity: quantity,
-                    unitPrice: 9.99,
-                    totalPrice: totalPrice
-                };
-                
-                localStorage.setItem('orderData', JSON.stringify(orderData));
-                
-                // Redirect to thank you page
-                window.location.href = 'danke.html';
-            });
-        });
-    </script>
+    <script src="checkout.js"></script>
 </body>
 </html>
 
