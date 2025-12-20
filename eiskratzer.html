@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eiskratzer kaufen - Camillo Industries</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="mainHeader">
+        <div class="header-content">
+            <div class="logo-section">
+                <img src="logo.png" alt="Camillo Industries Logo" class="logo">
+                <span class="company-name">Camillo Industries</span>
+            </div>
+            <nav class="main-nav">
+                <button class="hamburger" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="nav-menu">
+                    <li><a href="index.html">Start</a></li>
+                    <li><a href="eiskratzer.html" class="active">Produkte</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="product-page">
+        <div class="product-container">
+            <div class="product-image-section">
+                <img id="productImage" src="orange.png" alt="Eiskratzer">
+            </div>
+            <div class="product-info-section">
+                <h1>Premium Eiskratzer</h1>
+                <p class="product-description">
+                    Der Eiskratzer von Camillo Industries - mit intelligenter Bauweise für effizientes 
+                    Eiskratzen. Durchdachtes Design und günstiger Preis machen diesen Eiskratzer 
+                    zur perfekten Lösung für den Winter.
+                </p>
+                <div class="price-section">
+                    <div class="price" id="totalPrice">9,99 €</div>
+                </div>
+
+                <div class="quantity-selection">
+                    <h3>Menge</h3>
+                    <div class="quantity-selector">
+                        <button type="button" class="quantity-btn" id="decreaseQty">-</button>
+                        <input type="number" id="quantity" name="quantity" value="1" min="1" max="99" class="quantity-input">
+                        <button type="button" class="quantity-btn" id="increaseQty">+</button>
+                    </div>
+                </div>
+                
+                <div class="color-selection">
+                    <h3>Farbe auswählen</h3>
+                    <div class="color-picker">
+                        <div class="color-circle active" data-color="orange" data-image="orange.png" style="background-color: #FF8C00;"></div>
+                        <div class="color-circle" data-color="blau" data-image="Blau.png" style="background-color: #0066CC;"></div>
+                        <div class="color-circle" data-color="gelb" data-image="gelb.png" style="background-color: #FFD700;"></div>
+                        <div class="color-circle" data-color="grau" data-image="grau.png" style="background-color: #808080;"></div>
+                        <div class="color-circle" data-color="grün" data-image="grün.png" style="background-color: #008000;"></div>
+                        <div class="color-circle" data-color="pink" data-image="pink.png" style="background-color: #FFC0CB;"></div>
+                        <div class="color-circle" data-color="rot" data-image="rot.png" style="background-color: #FF0000;"></div>
+                        <div class="color-circle" data-color="schwarz" data-image="schwarz.png" style="background-color: #000000;"></div>
+                        <div class="color-circle" data-color="weiß" data-image="weiß.png" style="background-color: #FFFFFF; border: 2px solid #ddd;"></div>
+                    </div>
+                </div>
+
+                <div class="purchase-section">
+                    <a href="checkout.html" class="btn btn-primary btn-large">Sofort kaufen</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Camillo Industries</h3>
+            </div>
+            <div class="footer-section">
+                <h4>Rechtliches</h4>
+                <ul>
+                    <li><a href="impressum.html">Impressum</a></li>
+                    <li><a href="datenschutz.html">Datenschutz</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Kontakt</h4>
+                <p>info@camillo-industries.de</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 Camillo Industries. Alle Rechte vorbehalten.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        // Price and quantity functionality
+        const basePrice = 9.99;
+        const quantityInput = document.getElementById('quantity');
+        const decreaseBtn = document.getElementById('decreaseQty');
+        const increaseBtn = document.getElementById('increaseQty');
+        const totalPriceDisplay = document.getElementById('totalPrice');
+
+        function updatePrice() {
+            const quantity = parseInt(quantityInput.value) || 1;
+            const total = (basePrice * quantity).toFixed(2);
+            totalPriceDisplay.textContent = total.replace('.', ',') + ' €';
+            localStorage.setItem('quantity', quantity);
+            localStorage.setItem('totalPrice', total);
+        }
+
+        decreaseBtn.addEventListener('click', function() {
+            const currentValue = parseInt(quantityInput.value) || 1;
+            if (currentValue > 1) {
+                quantityInput.value = currentValue - 1;
+                updatePrice();
+            }
+        });
+
+        increaseBtn.addEventListener('click', function() {
+            const currentValue = parseInt(quantityInput.value) || 1;
+            if (currentValue < 99) {
+                quantityInput.value = currentValue + 1;
+                updatePrice();
+            }
+        });
+
+        quantityInput.addEventListener('change', function() {
+            let value = parseInt(this.value) || 1;
+            if (value < 1) value = 1;
+            if (value > 99) value = 99;
+            this.value = value;
+            updatePrice();
+        });
+
+        // Initialize price on load
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePrice();
+
+            // Color selection functionality
+            const colorCircles = document.querySelectorAll('.color-circle');
+            const productImage = document.getElementById('productImage');
+            
+            // Check if color was selected from index page
+            const savedColor = localStorage.getItem('selectedColor');
+            const savedImage = localStorage.getItem('selectedImage');
+            
+            if (savedColor && savedImage) {
+                // Find and activate the corresponding color circle
+                colorCircles.forEach(circle => {
+                    if (circle.getAttribute('data-color') === savedColor) {
+                        circle.classList.add('active');
+                        productImage.src = savedImage;
+                    } else {
+                        circle.classList.remove('active');
+                    }
+                });
+            }
+            
+            colorCircles.forEach(circle => {
+                circle.addEventListener('click', function() {
+                    // Remove active class from all circles
+                    colorCircles.forEach(c => c.classList.remove('active'));
+                    // Add active class to clicked circle
+                    this.classList.add('active');
+                    // Update product image
+                    const imagePath = this.getAttribute('data-image');
+                    productImage.src = imagePath;
+                    
+                    // Save selected color to localStorage for checkout
+                    localStorage.setItem('selectedColor', this.getAttribute('data-color'));
+                    localStorage.setItem('selectedImage', imagePath);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+
