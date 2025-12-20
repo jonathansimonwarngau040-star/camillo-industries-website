@@ -19,7 +19,17 @@ function initializeSupabase() {
 
     // Supabase Client erstellen (wenn Supabase SDK geladen ist)
     if (typeof supabase !== 'undefined') {
-        supabaseClient = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+        supabaseClient = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false
+            },
+            db: {
+                schema: 'public'
+            }
+        });
+        console.log('Supabase Client initialisiert:', supabaseClient);
     } else {
         console.error('Supabase SDK nicht geladen!');
     }
