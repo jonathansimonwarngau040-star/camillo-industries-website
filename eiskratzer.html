@@ -140,6 +140,9 @@
         // Initialize price on load
         document.addEventListener('DOMContentLoaded', function() {
             updatePrice();
+            
+            // Produkttyp im localStorage speichern
+            localStorage.setItem('produkttyp', 'Eiskratzer');
 
             // Color selection functionality
             const colorCircles = document.querySelectorAll('.color-circle');

@@ -112,7 +112,7 @@ class ZohoMailSender:
             return False
     
     def send_shipping_confirmation(self, name: str, email: str, street: str, 
-                                  zip_code: str, city: str, color: str, quantity: int) -> bool:
+                                  zip_code: str, city: str, produkttyp: str, color: str, quantity: int) -> bool:
         """
         Sendet Versandbestätigung an Kunden
         
@@ -122,6 +122,7 @@ class ZohoMailSender:
             street: Straße
             zip_code: Postleitzahl
             city: Stadt
+            produkttyp: Typ des Produkts (z.B. Eiskratzer)
             color: Farbe des Produkts
             quantity: Anzahl
         
@@ -142,6 +143,7 @@ class ZohoMailSender:
                 
                 <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
                     <h3 style="margin-top: 0;">Bestelldetails:</h3>
+                    <p><strong>Produkt:</strong> {produkttyp}</p>
                     <p><strong>Farbe:</strong> {color}</p>
                     <p><strong>Menge:</strong> {quantity}</p>
                     <p><strong>Lieferadresse:</strong><br>

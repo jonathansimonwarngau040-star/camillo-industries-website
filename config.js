@@ -10,7 +10,8 @@ const SUPABASE_CONFIG = {
 
 // PayPal Konfiguration (optional - nur wenn Sie PayPal verwenden möchten)
 const PAYPAL_CONFIG = {
-    clientId: 'YOUR_PAYPAL_CLIENT_ID' // Ihre PayPal Client ID
+    clientId: 'Acs87Wq9cOQX76LLh9OYBPSoq_Kf0I-X2UZuY2WN05QSA7pUKD0zlMdTIGC2ygI_Op9952pXA5_mBjN5' // PayPal Live Client ID (Produktion)
+    // Sandbox Client ID (für Tests): ATtNG-19e2VJsZeHWTu2BVweOtzqiMI6vHDdtTPbkBy1tmS-P-R8X-TPMEKWpu2VdRIqeQLJ1dwKe2zc
 };
 
 // Stripe Konfiguration (optional - nur wenn Sie Stripe für Kreditkarten verwenden möchten)

@@ -225,7 +225,7 @@ class BestellungenManager:
         # Treeview für offene Bestellungen
         self.open_tree = ttk.Treeview(
             left_frame,
-            columns=("id", "name", "email", "street", "zip", "city", "color", "quantity", "total_price", "created_at", "versendet"),
+            columns=("id", "name", "email", "street", "zip", "city", "produkttyp", "color", "quantity", "total_price", "created_at", "versendet"),
             show="headings",
             yscrollcommand=left_v_scrollbar.set,
             xscrollcommand=left_h_scrollbar.set,
@@ -242,6 +242,7 @@ class BestellungenManager:
             ("street", "Straße", 200),
             ("zip", "PLZ", 80),
             ("city", "Ort", 150),
+            ("produkttyp", "Produkttyp", 120),
             ("color", "Farbe", 120),
             ("quantity", "Menge", 80),
             ("total_price", "Gesamtpreis", 120),
@@ -281,7 +282,7 @@ class BestellungenManager:
         # Treeview für archivierte Bestellungen
         self.archive_tree = ttk.Treeview(
             right_frame,
-            columns=("id", "name", "email", "street", "zip", "city", "color", "quantity", "total_price", "created_at", "versendet"),
+            columns=("id", "name", "email", "street", "zip", "city", "produkttyp", "color", "quantity", "total_price", "created_at", "versendet"),
             show="headings",
             yscrollcommand=right_v_scrollbar.set,
             xscrollcommand=right_h_scrollbar.set,
@@ -449,6 +450,7 @@ class BestellungenManager:
                 bestellung.get('street', ''),
                 bestellung.get('zip', ''),
                 bestellung.get('city', ''),
+                bestellung.get('produkttyp', 'Eiskratzer'),  # Produkttyp hinzufügen
                 color_display,
                 quantity,
                 total_price_str,
@@ -620,6 +622,7 @@ class BestellungenManager:
                             street=bestellung.get('street', ''),
                             zip_code=bestellung.get('zip', ''),
                             city=bestellung.get('city', ''),
+                            produkttyp=bestellung.get('produkttyp', 'Eiskratzer'),
                             color=bestellung.get('color', ''),
                             quantity=bestellung.get('quantity', 0)
                         )

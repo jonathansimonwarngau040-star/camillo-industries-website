@@ -544,6 +544,21 @@ header.hidden {
     border-top: 2px solid var(--border-color);
 }
 
+/* PayPal Button Container */
+#paypal-button-container {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    min-height: 50px;
+}
+
+#paypal-button-container p {
+    padding: 1rem;
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 5px;
+    color: #856404;
+}
+
 .order-summary {
     background-color: var(--white);
     padding: 2rem;

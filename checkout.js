@@ -95,32 +95,56 @@ function initializeCheckoutPage() {
     }
 }
 
+// PayPal Button Instance
+let paypalButtonsInstance = null;
+
 // Zahlungsmethoden initialisieren
 function initializePaymentMethods() {
     const paypalRadio = document.getElementById('paypal');
     const creditCardRadio = document.getElementById('creditcard');
     const creditCardFields = document.getElementById('creditCardFields');
     const checkoutForm = document.getElementById('checkoutForm');
+    const paypalButtonContainer = document.getElementById('paypal-button-container');
+    const standardSubmitButton = document.getElementById('standardSubmitButton');
 
     // Payment method toggle
     paypalRadio.addEventListener('change', function() {
         if (this.checked) {
             creditCardFields.style.display = 'none';
+            standardSubmitButton.style.display = 'none';
+            paypalButtonContainer.style.display = 'block';
+            // PayPal Buttons neu rendern, wenn bereits initialisiert
+            if (paypalButtonsInstance) {
+                renderPayPalButtons();
+            }
         }
     });
 
     creditCardRadio.addEventListener('change', function() {
         if (this.checked) {
             creditCardFields.style.display = 'block';
+            paypalButtonContainer.style.display = 'none';
+            standardSubmitButton.style.display = 'block';
         }
     });
 
-    // Form submission
+    // Initial PayPal Buttons laden, wenn PayPal als Standard gewählt ist
+    if (paypalRadio.checked) {
+        loadPayPalSDK();
+    }
+
+    // Form submission (nur für Kreditkarte/Überweisung, PayPal hat eigenen Button)
     checkoutForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const formData = new FormData(checkoutForm);
         const paymentMethod = formData.get('payment');
+        
+        // Wenn PayPal gewählt ist, sollte der PayPal-Button verwendet werden
+        if (paymentMethod === 'paypal') {
+            alert('Bitte verwenden Sie den PayPal-Button, um mit PayPal zu bezahlen.');
+            return;
+        }
         
         // Validierung
         if (!validateForm(formData, paymentMethod)) {
@@ -132,9 +156,7 @@ function initializePaymentMethods() {
 
         // Zahlungsabwicklung basierend auf gewählter Methode
         try {
-            if (paymentMethod === 'paypal') {
-                await processPayPalPayment(orderData);
-            } else if (paymentMethod === 'creditcard') {
+            if (paymentMethod === 'creditcard') {
                 await processCreditCardPayment(orderData);
             }
         } catch (error) {
@@ -196,6 +218,7 @@ function collectOrderData(formData) {
         zip: formData.get('zip'),
         city: formData.get('city'),
         color: localStorage.getItem('selectedColor') || 'orange',
+        produkttyp: localStorage.getItem('produkttyp') || 'Eiskratzer', // Produkttyp aus localStorage oder Standard
         quantity: quantity,
         unitPrice: unitPrice,
         shippingCost: shippingCost,
@@ -204,17 +227,153 @@ function collectOrderData(formData) {
     };
 }
 
-// PayPal-Zahlung verarbeiten
-async function processPayPalPayment(orderData) {
-    // Hinweis: Für eine vollständige PayPal-Integration benötigen Sie ein Backend
-    // Die aktuelle Implementierung speichert Bestellungen direkt in Supabase
-    // In einer Produktionsumgebung sollten Sie PayPal Buttons SDK verwenden und
-    // die Bestellung erst nach erfolgreicher PayPal-Zahlung speichern
+// PayPal SDK laden
+function loadPayPalSDK() {
+    // Prüfen ob PayPal Client ID konfiguriert ist
+    if (typeof PAYPAL_CONFIG === 'undefined' || !PAYPAL_CONFIG.clientId || PAYPAL_CONFIG.clientId === 'YOUR_PAYPAL_CLIENT_ID') {
+        console.warn('PayPal Client ID nicht konfiguriert. Bitte fügen Sie Ihre Client ID in config.js hinzu.');
+        document.getElementById('paypal-button-container').innerHTML = '<p style="color: #d32f2f;">PayPal ist nicht konfiguriert. Bitte wenden Sie sich an den Administrator.</p>';
+        document.getElementById('standardSubmitButton').style.display = 'block';
+        return;
+    }
+
+    // Prüfen ob SDK bereits geladen wurde
+    if (window.paypal) {
+        renderPayPalButtons();
+        return;
+    }
+
+    // SDK laden
+    const script = document.createElement('script');
+    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CONFIG.clientId}&currency=EUR&locale=de_DE`;
+    script.async = true;
+    script.onload = function() {
+        console.log('PayPal SDK geladen');
+        renderPayPalButtons();
+    };
+    script.onerror = function() {
+        console.error('Fehler beim Laden des PayPal SDK');
+        document.getElementById('paypal-button-container').innerHTML = '<p style="color: #d32f2f;">Fehler beim Laden von PayPal. Bitte versuchen Sie es später erneut.</p>';
+        document.getElementById('standardSubmitButton').style.display = 'block';
+    };
+    document.head.appendChild(script);
+}
+
+// PayPal Smart Payment Buttons rendern
+function renderPayPalButtons() {
+    const paypalButtonContainer = document.getElementById('paypal-button-container');
     
-    // Für jetzt: Direkt in Supabase speichern
-    // Transaction ID wird generiert (in Produktion würde diese von PayPal kommen)
+    // Container leeren
+    paypalButtonContainer.innerHTML = '';
+
+    if (!window.paypal) {
+        console.error('PayPal SDK nicht verfügbar');
+        return;
+    }
+
+    // Bestelldaten für PayPal berechnen
+    const quantity = parseInt(localStorage.getItem('quantity')) || 1;
+    const unitPrice = 9.99;
+    const shippingCost = 4.19;
+    const subtotal = unitPrice * quantity;
+    const totalPrice = subtotal + shippingCost;
+
+    paypal.Buttons({
+        style: {
+            layout: 'vertical',
+            color: 'blue',
+            shape: 'rect',
+            label: 'paypal'
+        },
+        createOrder: function(data, actions) {
+            // Order erstellen
+            return actions.order.create({
+                purchase_units: [{
+                    description: 'Premium Eiskratzer - Camillo Industries',
+                    amount: {
+                        currency_code: 'EUR',
+                        value: totalPrice.toFixed(2),
+                        breakdown: {
+                            item_total: {
+                                currency_code: 'EUR',
+                                value: subtotal.toFixed(2)
+                            },
+                            shipping: {
+                                currency_code: 'EUR',
+                                value: shippingCost.toFixed(2)
+                            }
+                        }
+                    },
+                    items: [{
+                        name: 'Premium Eiskratzer',
+                        description: `Farbe: ${getColorName(localStorage.getItem('selectedColor') || 'orange')}, Menge: ${quantity}`,
+                        quantity: quantity.toString(),
+                        unit_amount: {
+                            currency_code: 'EUR',
+                            value: unitPrice.toFixed(2)
+                        }
+                    }]
+                }],
+                application_context: {
+                    shipping_preference: 'NO_SHIPPING' // Adresse bereits im Formular erfasst
+                }
+            });
+        },
+        onApprove: async function(data, actions) {
+            try {
+                // Order Details abrufen
+                const orderDetails = await actions.order.capture();
+                console.log('PayPal Zahlung erfolgreich:', orderDetails);
+
+                // Bestelldaten sammeln
+                const formData = new FormData(document.getElementById('checkoutForm'));
+                const orderData = collectOrderData(formData);
+
+                // Transaction ID aus PayPal Response extrahieren
+                const transactionId = orderDetails.purchase_units[0].payments.captures[0].id;
+
+                // Bestellung speichern mit PayPal Transaction ID
+                await saveOrderToSupabase(orderData, 'paypal', transactionId, 'completed');
+            } catch (error) {
+                console.error('Fehler bei PayPal-Zahlung:', error);
+                alert('Es gab einen Fehler bei der Zahlungsabwicklung. Bitte versuchen Sie es erneut.');
+            }
+        },
+        onError: function(err) {
+            console.error('PayPal Fehler:', err);
+            alert('Es gab einen Fehler mit PayPal. Bitte versuchen Sie es erneut oder wählen Sie eine andere Zahlungsmethode.');
+        },
+        onCancel: function(data) {
+            console.log('PayPal Zahlung abgebrochen:', data);
+            // Benutzer kann erneut versuchen oder andere Zahlungsmethode wählen
+        }
+    }).render('#paypal-button-container');
+
+    console.log('PayPal Buttons gerendert');
+}
+
+// Hilfsfunktion für Farbnamen
+function getColorName(colorKey) {
+    const colorNames = {
+        'orange': 'Orange',
+        'blau': 'Blau',
+        'gelb': 'Gelb',
+        'grau': 'Grau',
+        'grün': 'Grün',
+        'pink': 'Pink',
+        'rot': 'Rot',
+        'schwarz': 'Schwarz',
+        'weiß': 'Weiß'
+    };
+    return colorNames[colorKey] || colorKey;
+}
+
+// PayPal-Zahlung verarbeiten (Legacy-Funktion für Fallback)
+async function processPayPalPayment(orderData) {
+    // Diese Funktion wird nur verwendet, wenn PayPal SDK nicht verfügbar ist
+    // Normalerweise wird die Zahlung über renderPayPalButtons() abgewickelt
     const transactionId = 'paypal-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    await saveOrderToSupabase(orderData, 'paypal', transactionId);
+    await saveOrderToSupabase(orderData, 'paypal', transactionId, 'pending');
 }
 
 // Kreditkartenzahlung verarbeiten
@@ -247,6 +406,7 @@ async function sendOrderConfirmationEmail(orderData) {
                     
                     <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
                         <h3 style="margin-top: 0;">Bestelldetails:</h3>
+                        <p><strong>Produkt:</strong> ${orderData.produkttyp || 'Eiskratzer'}</p>
                         <p><strong>Farbe:</strong> ${orderData.color}</p>
                         <p><strong>Menge:</strong> ${orderData.quantity}</p>
                         <p><strong>Gesamtpreis:</strong> €${orderData.totalPrice.toFixed(2)}</p>
@@ -371,6 +531,7 @@ async function sendOrderNotificationEmail(orderData, paymentMethod) {
                         <p><strong>Adresse:</strong><br>
                         ${orderData.street}<br>
                         ${orderData.zip} ${orderData.city}</p>
+                        <p><strong>Produkt:</strong> ${orderData.produkttyp || 'Eiskratzer'}</p>
                         <p><strong>Farbe:</strong> ${orderData.color}</p>
                         <p><strong>Menge:</strong> ${orderData.quantity}</p>
                         <p><strong>Gesamtpreis:</strong> €${orderData.totalPrice.toFixed(2)}</p>
@@ -470,7 +631,7 @@ async function sendOrderNotificationEmail(orderData, paymentMethod) {
 }
 
 // Bestellung in Supabase speichern
-async function saveOrderToSupabase(orderData, paymentMethod, transactionId) {
+async function saveOrderToSupabase(orderData, paymentMethod, transactionId, paymentStatus = 'pending') {
     if (!supabaseClient) {
         throw new Error('Supabase Client nicht initialisiert. Bitte überprüfen Sie Ihre Konfiguration.');
     }
@@ -486,12 +647,13 @@ async function saveOrderToSupabase(orderData, paymentMethod, transactionId) {
                     zip: orderData.zip,
                     city: orderData.city,
                     color: orderData.color,
+                    produkttyp: orderData.produkttyp || 'Eiskratzer', // Produkttyp hinzufügen
                     quantity: orderData.quantity,
                     unit_price: orderData.unitPrice,
                     shipping_cost: orderData.shippingCost,
                     total_price: orderData.totalPrice,
                     payment_method: paymentMethod,
-                    payment_status: 'pending', // Wird auf 'completed' gesetzt, sobald Zahlung bestätigt ist
+                    payment_status: paymentStatus, // 'completed' für erfolgreiche PayPal-Zahlungen, 'pending' für andere
                     payment_transaction_id: transactionId,
                     order_status: 'pending',
                     versendet: false // Standardmäßig noch nicht versendet
