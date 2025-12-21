@@ -262,13 +262,33 @@ function loadPayPalSDK() {
         renderPayPalButtons();
         return;
     } else if (window.paypal) {
-        console.log('PayPal SDK geladen, aber Buttons API noch nicht verfügbar, warte...');
+        console.log('PayPal SDK geladen, aber Buttons API noch nicht verfügbar');
+        console.log('window.paypal Objekt:', window.paypal);
+        console.log('Verfügbare Properties:', Object.keys(window.paypal));
+        console.log('paypal.Buttons Typ:', typeof window.paypal.Buttons);
+        
+        // Prüfe alternative API-Pfade
+        if (window.paypal.Buttons && typeof window.paypal.Buttons === 'object') {
+            console.log('paypal.Buttons ist ein Objekt, nicht eine Funktion');
+        }
+        
         // Warte bis Buttons API verfügbar ist
+        let attempts = 0;
+        const maxAttempts = 50; // 5 Sekunden
         const checkInterval = setInterval(function() {
+            attempts++;
             if (window.paypal && typeof window.paypal.Buttons === 'function') {
                 clearInterval(checkInterval);
                 console.log('PayPal Buttons API jetzt verfügbar');
                 renderPayPalButtons();
+            } else {
+                if (attempts % 10 === 0) { // Alle 1 Sekunde loggen
+                    console.log(`Warte auf PayPal Buttons API... (${attempts}/50)`);
+                    console.log('window.paypal:', window.paypal);
+                    if (window.paypal) {
+                        console.log('Verfügbare Properties:', Object.keys(window.paypal));
+                    }
+                }
             }
         }, 100);
         
@@ -277,9 +297,31 @@ function loadPayPalSDK() {
             clearInterval(checkInterval);
             if (!window.paypal || typeof window.paypal.Buttons !== 'function') {
                 console.error('PayPal Buttons API nach 5 Sekunden immer noch nicht verfügbar');
+                console.error('Finale Prüfung - window.paypal:', window.paypal);
+                if (window.paypal) {
+                    console.error('Verfügbare Properties:', Object.keys(window.paypal));
+                    console.error('paypal.Buttons:', window.paypal.Buttons);
+                    console.error('paypal.Buttons Typ:', typeof window.paypal.Buttons);
+                }
                 const container = document.getElementById('paypal-button-container');
                 if (container) {
-                    container.innerHTML = '<p style="color: #d32f2f;">Fehler beim Laden von PayPal. Bitte laden Sie die Seite neu.</p>';
+                    container.innerHTML = `
+                        <div style="color: #d32f2f; padding: 15px; background-color: #ffebee; border-radius: 5px;">
+                            <p><strong>Fehler beim Laden von PayPal</strong></p>
+                            <p>Mögliche Ursachen:</p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Die Website läuft nicht über HTTPS (PayPal erfordert HTTPS für Live-Client-IDs)</li>
+                                <li>Die PayPal Client ID ist ungültig oder nicht aktiviert</li>
+                                <li>Netzwerkprobleme beim Laden des PayPal SDK</li>
+                            </ul>
+                            <p>Bitte überprüfen Sie die Browser-Konsole (F12) für detaillierte Fehlermeldungen.</p>
+                            <p>Falls Sie testen möchten, können Sie die Sandbox Client ID in config.js verwenden.</p>
+                        </div>
+                    `;
+                }
+                const submitButton = document.getElementById('standardSubmitButton');
+                if (submitButton) {
+                    submitButton.style.display = 'block';
                 }
             }
         }, 5000);
@@ -288,47 +330,98 @@ function loadPayPalSDK() {
 
     // SDK laden
     console.log('Lade PayPal SDK...');
-    const script = document.createElement('script');
-    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CONFIG.clientId}&currency=EUR&locale=de_DE`;
-    script.async = true;
-    script.onload = function() {
-        console.log('✅ PayPal SDK Script geladen');
-        // Warte kurz, bis das SDK vollständig initialisiert ist
-        const checkReady = setInterval(function() {
+    const scriptUrl = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CONFIG.clientId}&currency=EUR&locale=de_DE`;
+    console.log('PayPal SDK URL:', scriptUrl);
+    
+    // Prüfen ob Script bereits existiert
+    const existingScript = document.querySelector(`script[src*="paypal.com/sdk/js"]`);
+    if (existingScript) {
+        console.log('PayPal SDK Script bereits im DOM vorhanden');
+        // Warte auf Initialisierung
+        const checkExisting = setInterval(function() {
             if (window.paypal && typeof window.paypal.Buttons === 'function') {
-                clearInterval(checkReady);
-                console.log('✅ PayPal SDK vollständig initialisiert, Buttons API verfügbar');
+                clearInterval(checkExisting);
+                console.log('✅ PayPal SDK vollständig initialisiert (existierendes Script)');
                 renderPayPalButtons();
             }
-        }, 50);
+        }, 100);
         
-        // Timeout nach 5 Sekunden
         setTimeout(function() {
-            clearInterval(checkReady);
-            if (window.paypal && typeof window.paypal.Buttons === 'function') {
-                console.log('✅ PayPal SDK initialisiert (nach Timeout-Check)');
-                renderPayPalButtons();
-            } else {
-                console.error('❌ PayPal SDK nicht vollständig initialisiert nach 5 Sekunden');
-                const container = document.getElementById('paypal-button-container');
-                if (container) {
-                    container.innerHTML = '<p style="color: #d32f2f;">Fehler beim Initialisieren von PayPal. Bitte laden Sie die Seite neu.</p>';
+            clearInterval(checkExisting);
+            if (!window.paypal || typeof window.paypal.Buttons !== 'function') {
+                console.error('❌ PayPal SDK nicht initialisiert (existierendes Script)');
+                console.log('window.paypal:', window.paypal);
+                console.log('window.paypal Typ:', typeof window.paypal);
+                if (window.paypal) {
+                    console.log('Verfügbare PayPal Properties:', Object.keys(window.paypal));
                 }
             }
         }, 5000);
+        return;
+    }
+    
+    const script = document.createElement('script');
+    script.src = scriptUrl;
+    script.async = true;
+    script.onload = function() {
+        console.log('✅ PayPal SDK Script geladen (onload Event)');
+        console.log('window.paypal nach onload:', window.paypal);
+        console.log('window.paypal Typ:', typeof window.paypal);
+        
+        // Warte kurz, bis das SDK vollständig initialisiert ist
+        let attempts = 0;
+        const maxAttempts = 100; // 10 Sekunden (100 * 100ms)
+        const checkReady = setInterval(function() {
+            attempts++;
+            if (window.paypal) {
+                console.log(`Prüfung ${attempts}: window.paypal vorhanden, Buttons Typ:`, typeof window.paypal.Buttons);
+                if (typeof window.paypal.Buttons === 'function') {
+                    clearInterval(checkReady);
+                    console.log('✅ PayPal SDK vollständig initialisiert, Buttons API verfügbar');
+                    renderPayPalButtons();
+                    return;
+                }
+            } else {
+                console.log(`Prüfung ${attempts}: window.paypal noch nicht vorhanden`);
+            }
+            
+            if (attempts >= maxAttempts) {
+                clearInterval(checkReady);
+                console.error('❌ PayPal SDK nicht vollständig initialisiert nach 10 Sekunden');
+                console.log('window.paypal:', window.paypal);
+                console.log('window.paypal Typ:', typeof window.paypal);
+                if (window.paypal) {
+                    console.log('Verfügbare PayPal Properties:', Object.keys(window.paypal));
+                }
+                const container = document.getElementById('paypal-button-container');
+                if (container) {
+                    container.innerHTML = '<p style="color: #d32f2f;">Fehler beim Initialisieren von PayPal. Bitte laden Sie die Seite neu oder kontaktieren Sie den Support.</p>';
+                }
+            }
+        }, 100);
     };
-    script.onerror = function() {
-        console.error('❌ Fehler beim Laden des PayPal SDK');
+    script.onerror = function(error) {
+        console.error('❌ Fehler beim Laden des PayPal SDK Scripts');
+        console.error('Fehler-Details:', error);
+        console.error('Script URL:', scriptUrl);
         const container = document.getElementById('paypal-button-container');
         if (container) {
-            container.innerHTML = '<p style="color: #d32f2f;">Fehler beim Laden von PayPal. Bitte versuchen Sie es später erneut.</p>';
+            container.innerHTML = '<p style="color: #d32f2f;">Fehler beim Laden von PayPal. Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es später erneut.</p>';
         }
         const submitButton = document.getElementById('standardSubmitButton');
         if (submitButton) {
             submitButton.style.display = 'block';
         }
     };
+    
+    // Zusätzlicher Error-Handler für Netzwerkfehler
+    script.addEventListener('error', function(event) {
+        console.error('❌ Script Load Error Event:', event);
+    });
+    
+    console.log('Füge PayPal SDK Script zum DOM hinzu...');
     document.head.appendChild(script);
+    console.log('PayPal SDK Script zum DOM hinzugefügt');
 }
 
 // PayPal Smart Payment Buttons rendern
