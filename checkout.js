@@ -113,8 +113,11 @@ function initializePaymentMethods() {
             creditCardFields.style.display = 'none';
             standardSubmitButton.style.display = 'none';
             paypalButtonContainer.style.display = 'block';
-            // PayPal Buttons neu rendern, wenn bereits initialisiert
-            if (paypalButtonsInstance) {
+            // PayPal SDK laden, wenn noch nicht geladen
+            if (!window.paypal) {
+                loadPayPalSDK();
+            } else {
+                // PayPal Buttons rendern, wenn SDK bereits geladen
                 renderPayPalButtons();
             }
         }
@@ -130,7 +133,13 @@ function initializePaymentMethods() {
 
     // Initial PayPal Buttons laden, wenn PayPal als Standard gewählt ist
     if (paypalRadio.checked) {
+        // PayPal Container anzeigen
+        paypalButtonContainer.style.display = 'block';
+        standardSubmitButton.style.display = 'none';
         loadPayPalSDK();
+    } else {
+        // PayPal Container verstecken, wenn nicht gewählt
+        paypalButtonContainer.style.display = 'none';
     }
 
     // Form submission (nur für Kreditkarte/Überweisung, PayPal hat eigenen Button)
@@ -229,32 +238,50 @@ function collectOrderData(formData) {
 
 // PayPal SDK laden
 function loadPayPalSDK() {
+    console.log('loadPayPalSDK aufgerufen');
+    
     // Prüfen ob PayPal Client ID konfiguriert ist
     if (typeof PAYPAL_CONFIG === 'undefined' || !PAYPAL_CONFIG.clientId || PAYPAL_CONFIG.clientId === 'YOUR_PAYPAL_CLIENT_ID') {
         console.warn('PayPal Client ID nicht konfiguriert. Bitte fügen Sie Ihre Client ID in config.js hinzu.');
-        document.getElementById('paypal-button-container').innerHTML = '<p style="color: #d32f2f;">PayPal ist nicht konfiguriert. Bitte wenden Sie sich an den Administrator.</p>';
-        document.getElementById('standardSubmitButton').style.display = 'block';
+        const container = document.getElementById('paypal-button-container');
+        if (container) {
+            container.innerHTML = '<p style="color: #d32f2f;">PayPal ist nicht konfiguriert. Bitte wenden Sie sich an den Administrator.</p>';
+        }
+        const submitButton = document.getElementById('standardSubmitButton');
+        if (submitButton) {
+            submitButton.style.display = 'block';
+        }
         return;
     }
 
+    console.log('PayPal Client ID gefunden:', PAYPAL_CONFIG.clientId.substring(0, 20) + '...');
+
     // Prüfen ob SDK bereits geladen wurde
     if (window.paypal) {
+        console.log('PayPal SDK bereits geladen, rendere Buttons...');
         renderPayPalButtons();
         return;
     }
 
     // SDK laden
+    console.log('Lade PayPal SDK...');
     const script = document.createElement('script');
     script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CONFIG.clientId}&currency=EUR&locale=de_DE`;
     script.async = true;
     script.onload = function() {
-        console.log('PayPal SDK geladen');
+        console.log('✅ PayPal SDK erfolgreich geladen');
         renderPayPalButtons();
     };
     script.onerror = function() {
-        console.error('Fehler beim Laden des PayPal SDK');
-        document.getElementById('paypal-button-container').innerHTML = '<p style="color: #d32f2f;">Fehler beim Laden von PayPal. Bitte versuchen Sie es später erneut.</p>';
-        document.getElementById('standardSubmitButton').style.display = 'block';
+        console.error('❌ Fehler beim Laden des PayPal SDK');
+        const container = document.getElementById('paypal-button-container');
+        if (container) {
+            container.innerHTML = '<p style="color: #d32f2f;">Fehler beim Laden von PayPal. Bitte versuchen Sie es später erneut.</p>';
+        }
+        const submitButton = document.getElementById('standardSubmitButton');
+        if (submitButton) {
+            submitButton.style.display = 'block';
+        }
     };
     document.head.appendChild(script);
 }
@@ -263,13 +290,16 @@ function loadPayPalSDK() {
 function renderPayPalButtons() {
     const paypalButtonContainer = document.getElementById('paypal-button-container');
     
-    // Container leeren
-    paypalButtonContainer.innerHTML = '';
-
     if (!window.paypal) {
         console.error('PayPal SDK nicht verfügbar');
         return;
     }
+
+    // Container leeren (wichtig: vor dem Rendern)
+    paypalButtonContainer.innerHTML = '';
+    
+    // Falls bereits eine Instanz existiert, sollte sie nicht mehr verwendet werden
+    paypalButtonsInstance = null;
 
     // Bestelldaten für PayPal berechnen
     const quantity = parseInt(localStorage.getItem('quantity')) || 1;
@@ -286,6 +316,28 @@ function renderPayPalButtons() {
             label: 'paypal'
         },
         createOrder: function(data, actions) {
+            // Formular validieren, bevor PayPal-Order erstellt wird
+            const formData = new FormData(document.getElementById('checkoutForm'));
+            
+            // Basis-Validierung
+            const name = formData.get('name');
+            const email = formData.get('email');
+            const street = formData.get('street');
+            const zip = formData.get('zip');
+            const city = formData.get('city');
+
+            if (!name || !email || !street || !zip || !city) {
+                alert('Bitte füllen Sie alle Pflichtfelder aus, bevor Sie mit PayPal bezahlen.');
+                return false; // Order wird nicht erstellt
+            }
+
+            // Email-Validierung
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
+                return false;
+            }
+
             // Order erstellen
             return actions.order.create({
                 purchase_units: [{
@@ -347,9 +399,18 @@ function renderPayPalButtons() {
             console.log('PayPal Zahlung abgebrochen:', data);
             // Benutzer kann erneut versuchen oder andere Zahlungsmethode wählen
         }
-    }).render('#paypal-button-container');
+    });
 
-    console.log('PayPal Buttons gerendert');
+    // Buttons rendern und Instanz speichern
+    try {
+        paypalButtonsInstance = buttons;
+        buttons.render('#paypal-button-container');
+        console.log('PayPal Buttons erfolgreich gerendert');
+    } catch (error) {
+        console.error('Fehler beim Rendern der PayPal Buttons:', error);
+        paypalButtonContainer.innerHTML = '<p style="color: #d32f2f;">Fehler beim Anzeigen des PayPal-Buttons. Bitte laden Sie die Seite neu.</p>';
+        document.getElementById('standardSubmitButton').style.display = 'block';
+    }
 }
 
 // Hilfsfunktion für Farbnamen
