@@ -116,28 +116,19 @@ class BestellungenManager:
     def init_zoho_mail(self):
         """Initialisiert Zoho Mail Sender"""
         try:
-            # TODO: Ersetzen Sie diese Werte mit Ihren Zoho OAuth-Anmeldedaten
-            # Sie finden diese in der Zoho Developer Console:
-            # - Client ID: Developer Console → Ihre App → Client ID
-            # - Client Secret: Developer Console → Ihre App → Client Secret
-            # - Refresh Token: Nach OAuth-Authentifizierung erhalten
-            ZOHO_CLIENT_ID = 'YOUR_ZOHO_CLIENT_ID'
-            ZOHO_CLIENT_SECRET = 'YOUR_ZOHO_CLIENT_SECRET'
-            ZOHO_REFRESH_TOKEN = 'YOUR_ZOHO_REFRESH_TOKEN'
-            ZOHO_ACCOUNT_ID = '6887007000000002002'  # Optional, wird automatisch ermittelt
+            # Zoho OAuth-Anmeldedaten
+            ZOHO_CLIENT_ID = '1000.GGLBL84VYO4CJMYWO7NWSSPRJ6B4EW'
+            ZOHO_CLIENT_SECRET = 'a0fe3f29b8e8cbedd3ccbf00b8455af0fbfc00e249'
+            ZOHO_REFRESH_TOKEN = '1000.5893079e3dd1f8d5d4758adcf4b28dd1.893b29c76dc0e10027f0bd6f7f2d5abc'
+            ZOHO_ACCOUNT_ID = '6887007000000002002'
             
-            if (ZOHO_CLIENT_ID != 'YOUR_ZOHO_CLIENT_ID' and 
-                ZOHO_CLIENT_SECRET != 'YOUR_ZOHO_CLIENT_SECRET' and 
-                ZOHO_REFRESH_TOKEN != 'YOUR_ZOHO_REFRESH_TOKEN'):
-                self.zoho_sender = ZohoMailSender(
-                    ZOHO_CLIENT_ID, 
-                    ZOHO_CLIENT_SECRET, 
-                    ZOHO_REFRESH_TOKEN,
-                    ZOHO_ACCOUNT_ID
-                )
-                print("Zoho Mail Sender erfolgreich initialisiert")
-            else:
-                print("Zoho Mail nicht konfiguriert - E-Mails werden nicht gesendet")
+            self.zoho_sender = ZohoMailSender(
+                ZOHO_CLIENT_ID, 
+                ZOHO_CLIENT_SECRET, 
+                ZOHO_REFRESH_TOKEN,
+                ZOHO_ACCOUNT_ID
+            )
+            print("Zoho Mail Sender erfolgreich initialisiert")
         except Exception as e:
             print(f"Zoho Mail Fehler: {e}")
             # Zoho Mail-Fehler sollen das Programm nicht blockieren

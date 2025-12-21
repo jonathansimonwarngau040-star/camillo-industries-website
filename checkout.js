@@ -266,7 +266,11 @@ async function sendOrderConfirmationEmail(orderData) {
             </html>
         `;
 
-        const response = await fetch('/api/send-email', {
+        // API-URL bestimmen (funktioniert auf beiden Domains)
+        const apiUrl = '/api/send-email';
+        console.log('Sende E-Mail über API:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -278,14 +282,19 @@ async function sendOrderConfirmationEmail(orderData) {
                 fromEmail: 'jonathan.simon@camillo-industries.de',
                 fromName: 'Camillo Industries'
             })
+        }).catch(error => {
+            console.error('Fetch-Fehler beim Senden der Bestellbestätigung:', error);
+            throw error;
         });
 
-        if (response.ok) {
+        if (response && response.ok) {
             const result = await response.json();
             console.log('Bestellbestätigung an Kunden gesendet:', result);
-        } else {
-            const error = await response.json();
+        } else if (response) {
+            const error = await response.json().catch(() => ({ error: 'Unknown error', status: response.status }));
             console.error('Fehler beim Senden der Bestellbestätigung:', error);
+        } else {
+            console.error('Keine Response erhalten - API-Route möglicherweise nicht verfügbar');
         }
     } catch (error) {
         console.error('Fehler beim Senden der Bestellbestätigung:', error);
@@ -324,7 +333,11 @@ async function sendOrderNotificationEmail(orderData, paymentMethod) {
             </html>
         `;
 
-        const response = await fetch('/api/send-email', {
+        // API-URL bestimmen (funktioniert auf beiden Domains)
+        const apiUrl = '/api/send-email';
+        console.log('Sende E-Mail über API:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -336,14 +349,19 @@ async function sendOrderNotificationEmail(orderData, paymentMethod) {
                 fromEmail: 'jonathan.simon@camillo-industries.de',
                 fromName: 'Camillo Industries Shop'
             })
+        }).catch(error => {
+            console.error('Fetch-Fehler beim Senden der Admin-Benachrichtigung:', error);
+            throw error;
         });
 
-        if (response.ok) {
+        if (response && response.ok) {
             const result = await response.json();
             console.log('Bestellbenachrichtigung an Admin gesendet:', result);
-        } else {
-            const error = await response.json();
+        } else if (response) {
+            const error = await response.json().catch(() => ({ error: 'Unknown error', status: response.status }));
             console.error('Fehler beim Senden der Admin-Benachrichtigung:', error);
+        } else {
+            console.error('Keine Response erhalten - API-Route möglicherweise nicht verfügbar');
         }
     } catch (error) {
         console.error('Fehler beim Senden der Admin-Benachrichtigung:', error);
