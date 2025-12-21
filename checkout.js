@@ -268,24 +268,33 @@ async function sendOrderConfirmationEmail(orderData) {
 
         // API-URL bestimmen (funktioniert auf beiden Domains)
         const apiUrl = '/api/send-email';
-        console.log('Sende E-Mail über API:', apiUrl);
+        console.log('Sende E-Mail über API:', apiUrl, 'von:', window.location.origin);
         
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                to: orderData.email,
-                subject: subject,
-                htmlBody: htmlBody,
-                fromEmail: 'jonathan.simon@camillo-industries.de',
-                fromName: 'Camillo Industries'
-            })
-        }).catch(error => {
-            console.error('Fetch-Fehler beim Senden der Bestellbestätigung:', error);
-            throw error;
-        });
+        let response;
+        try {
+            response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    to: orderData.email,
+                    subject: subject,
+                    htmlBody: htmlBody,
+                    fromEmail: 'jonathan.simon@camillo-industries.de',
+                    fromName: 'Camillo Industries'
+                })
+            });
+        } catch (fetchError) {
+            console.error('Fetch-Fehler beim Senden der Bestellbestätigung:', fetchError);
+            console.error('Fehler-Details:', {
+                message: fetchError.message,
+                name: fetchError.name,
+                stack: fetchError.stack
+            });
+            // E-Mail-Fehler sollen den Bestellprozess nicht blockieren
+            return;
+        }
 
         if (response && response.ok) {
             const result = await response.json();
@@ -335,24 +344,33 @@ async function sendOrderNotificationEmail(orderData, paymentMethod) {
 
         // API-URL bestimmen (funktioniert auf beiden Domains)
         const apiUrl = '/api/send-email';
-        console.log('Sende E-Mail über API:', apiUrl);
+        console.log('Sende Admin-Benachrichtigung über API:', apiUrl, 'von:', window.location.origin);
         
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                to: 'jonathan@camillo-industries.de',
-                subject: subject,
-                htmlBody: htmlBody,
-                fromEmail: 'jonathan.simon@camillo-industries.de',
-                fromName: 'Camillo Industries Shop'
-            })
-        }).catch(error => {
-            console.error('Fetch-Fehler beim Senden der Admin-Benachrichtigung:', error);
-            throw error;
-        });
+        let response;
+        try {
+            response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    to: 'jonathan@camillo-industries.de',
+                    subject: subject,
+                    htmlBody: htmlBody,
+                    fromEmail: 'jonathan.simon@camillo-industries.de',
+                    fromName: 'Camillo Industries Shop'
+                })
+            });
+        } catch (fetchError) {
+            console.error('Fetch-Fehler beim Senden der Admin-Benachrichtigung:', fetchError);
+            console.error('Fehler-Details:', {
+                message: fetchError.message,
+                name: fetchError.name,
+                stack: fetchError.stack
+            });
+            // E-Mail-Fehler sollen den Bestellprozess nicht blockieren
+            return;
+        }
 
         if (response && response.ok) {
             const result = await response.json();

@@ -2,7 +2,7 @@
 // Sendet E-Mails über die Zoho Mail API
 
 export default async function handler(req, res) {
-    // CORS-Header setzen
+    // CORS-Header setzen (immer zuerst)
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -10,12 +10,14 @@ export default async function handler(req, res) {
 
     // OPTIONS-Request für Preflight handhaben
     if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+        res.status(200).end();
+        return;
     }
 
     // Nur POST-Requests erlauben
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
+        res.status(405).json({ error: 'Method not allowed', allowedMethods: ['POST'] });
+        return;
     }
 
     try {
@@ -110,7 +112,8 @@ export default async function handler(req, res) {
         console.error('Unexpected error:', error);
         return res.status(500).json({ 
             error: 'Internal server error',
-            details: error.message 
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 }
