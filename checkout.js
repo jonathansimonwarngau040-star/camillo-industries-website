@@ -100,83 +100,27 @@ let paypalButtonsInstance = null;
 
 // Zahlungsmethoden initialisieren
 function initializePaymentMethods() {
-    const paypalRadio = document.getElementById('payment-paypal');
-    const creditCardRadio = document.getElementById('creditcard');
-    const creditCardFields = document.getElementById('creditCardFields');
     const checkoutForm = document.getElementById('checkoutForm');
     const paypalButtonContainer = document.getElementById('paypal-button-container');
     const standardSubmitButton = document.getElementById('standardSubmitButton');
 
-    // Payment method toggle
-    paypalRadio.addEventListener('change', function() {
-        if (this.checked) {
-            creditCardFields.style.display = 'none';
-            standardSubmitButton.style.display = 'none';
-            paypalButtonContainer.style.display = 'block';
-            // PayPal SDK laden, wenn noch nicht geladen
-            if (!window.paypal) {
-                loadPayPalSDK();
-            } else {
-                // PayPal Buttons rendern, wenn SDK bereits geladen
-                renderPayPalButtons();
-            }
-        }
-    });
+    // PayPal Container immer anzeigen, da PayPal die einzige Zahlungsmethode ist
+    paypalButtonContainer.style.display = 'block';
+    standardSubmitButton.style.display = 'none';
+    
+    // PayPal SDK laden
+    loadPayPalSDK();
 
-    creditCardRadio.addEventListener('change', function() {
-        if (this.checked) {
-            creditCardFields.style.display = 'block';
-            paypalButtonContainer.style.display = 'none';
-            standardSubmitButton.style.display = 'block';
-        }
-    });
-
-    // Initial PayPal Buttons laden, wenn PayPal als Standard gewählt ist
-    if (paypalRadio.checked) {
-        // PayPal Container anzeigen
-        paypalButtonContainer.style.display = 'block';
-        standardSubmitButton.style.display = 'none';
-        loadPayPalSDK();
-    } else {
-        // PayPal Container verstecken, wenn nicht gewählt
-        paypalButtonContainer.style.display = 'none';
-    }
-
-    // Form submission (nur für Kreditkarte/Überweisung, PayPal hat eigenen Button)
-    checkoutForm.addEventListener('submit', async function(e) {
+    // Form submission - nur verhindern, da PayPal eigenen Button hat
+    checkoutForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        
-        const formData = new FormData(checkoutForm);
-        const paymentMethod = formData.get('payment');
-        
-        // Wenn PayPal gewählt ist, sollte der PayPal-Button verwendet werden
-        if (paymentMethod === 'paypal') {
-            alert('Bitte verwenden Sie den PayPal-Button, um mit PayPal zu bezahlen.');
-            return;
-        }
-        
-        // Validierung
-        if (!validateForm(formData, paymentMethod)) {
-            return;
-        }
-
-        // Bestelldaten sammeln
-        const orderData = collectOrderData(formData);
-
-        // Zahlungsabwicklung basierend auf gewählter Methode
-        try {
-            if (paymentMethod === 'creditcard') {
-                await processCreditCardPayment(orderData);
-            }
-        } catch (error) {
-            console.error('Zahlungsfehler:', error);
-            alert('Ein Fehler ist aufgetreten: ' + error.message);
-        }
+        alert('Bitte verwenden Sie den PayPal-Button, um mit PayPal zu bezahlen.');
+        return false;
     });
 }
 
 // Formular validieren
-function validateForm(formData, paymentMethod) {
+function validateForm(formData) {
     const name = formData.get('name');
     const email = formData.get('email');
     const street = formData.get('street');
@@ -193,20 +137,6 @@ function validateForm(formData, paymentMethod) {
     if (!emailRegex.test(email)) {
         alert('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
         return false;
-    }
-
-    // Kreditkartenvalidierung (falls Kreditkarte gewählt)
-    if (paymentMethod === 'creditcard') {
-        // Für echte Kreditkartenzahlungen sollten wir Stripe verwenden
-        // Hier nur Basis-Validierung
-        const cardNumber = formData.get('cardNumber');
-        const cardExpiry = formData.get('cardExpiry');
-        const cardCVC = formData.get('cardCVC');
-
-        if (!cardNumber || !cardExpiry || !cardCVC) {
-            alert('Bitte füllen Sie alle Kreditkarteninformationen aus.');
-            return false;
-        }
     }
 
     return true;
@@ -232,7 +162,7 @@ function collectOrderData(formData) {
         unitPrice: unitPrice,
         shippingCost: shippingCost,
         totalPrice: totalPrice,
-        paymentMethod: formData.get('payment')
+        paymentMethod: 'paypal' // Nur PayPal als Zahlungsmethode
     };
 }
 

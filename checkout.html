@@ -79,18 +79,9 @@
                         
                         <div class="payment-methods">
                             <div class="payment-option">
-                                <input type="radio" id="payment-paypal" name="payment" value="paypal" checked>
-                                <label for="payment-paypal" class="payment-label">
+                                <label class="payment-label" style="cursor: default;">
                                     <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg" alt="PayPal" class="payment-logo">
                                     <span>PayPal</span>
-                                </label>
-                            </div>
-                            
-                            <div class="payment-option">
-                                <input type="radio" id="creditcard" name="payment" value="creditcard">
-                                <label for="creditcard" class="payment-label">
-                                    <span class="credit-card-icons">💳</span>
-                                    <span>Kreditkarte (Überweisung)</span>
                                 </label>
                             </div>
                         </div>
@@ -98,13 +89,7 @@
                         <!-- PayPal Smart Payment Buttons Container -->
                         <div id="paypal-button-container" style="margin-top: 20px; min-height: 50px;"></div>
 
-                        <div id="creditCardFields" class="credit-card-fields" style="display: none;">
-                            <div class="form-group">
-                                <p><strong>Hinweis:</strong> Bei Auswahl dieser Option erhalten Sie die Zahlungsinformationen per E-Mail. Bitte überweisen Sie den Betrag auf unser Bankkonto.</p>
-                            </div>
-                        </div>
-
-                        <!-- Standard Submit Button (nur sichtbar wenn PayPal nicht verfügbar oder Kreditkarte gewählt) -->
+                        <!-- Standard Submit Button (nur sichtbar wenn PayPal nicht verfügbar) -->
                         <button type="submit" id="standardSubmitButton" class="btn btn-primary btn-large" style="display: none;">Bestellung abschließen</button>
                     </form>
                 </div>
