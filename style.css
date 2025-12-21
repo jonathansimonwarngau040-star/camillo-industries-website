@@ -59,6 +59,14 @@ header.hidden {
     display: flex;
     align-items: center;
     gap: 1rem;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: opacity 0.3s;
+}
+
+.logo-section:hover {
+    opacity: 0.8;
 }
 
 .logo {
