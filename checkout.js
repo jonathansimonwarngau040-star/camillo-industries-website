@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeSupabase();
     initializeCheckoutPage();
     initializePaymentMethods();
-    initEmailJS(); // EmailJS initialisieren
+    // EmailJS wird nicht mehr verwendet - Zoho Mail API wird direkt verwendet
 });
 
 // Supabase initialisieren
@@ -231,85 +231,120 @@ async function processCreditCardPayment(orderData) {
     await saveOrderToSupabase(orderData, 'creditcard', transactionId);
 }
 
-// EmailJS initialisieren
-function initEmailJS() {
-    if (typeof EMAILJS_CONFIG !== 'undefined' && EMAILJS_CONFIG.publicKey && typeof emailjs !== 'undefined') {
-        emailjs.init(EMAILJS_CONFIG.publicKey);
-        console.log('EmailJS initialisiert');
-        return true;
-    } else {
-        console.warn('EmailJS nicht konfiguriert');
-        return false;
-    }
-}
-
-// E-Mail an Kunden senden (Bestellbestätigung)
+// Zoho Mail API - E-Mail an Kunden senden (Bestellbestätigung)
 async function sendOrderConfirmationEmail(orderData) {
-    if (!EMAILJS_CONFIG || !EMAILJS_CONFIG.serviceId || !EMAILJS_CONFIG.templateIdOrderConfirmation || typeof emailjs === 'undefined') {
-        console.warn('EmailJS nicht konfiguriert - E-Mail wird nicht gesendet', {
-            hasConfig: !!EMAILJS_CONFIG,
-            hasServiceId: !!EMAILJS_CONFIG?.serviceId,
-            hasTemplateId: !!EMAILJS_CONFIG?.templateIdOrderConfirmation,
-            hasEmailJS: typeof emailjs !== 'undefined'
-        });
-        return;
-    }
-
     try {
-        const templateParams = {
-            name: orderData.name,
-            customer_email: orderData.email,
-            color: orderData.color,
-            quantity: orderData.quantity,
-            total_price: orderData.totalPrice.toFixed(2),
-            street: orderData.street,
-            zip: orderData.zip,
-            city: orderData.city
-        };
+        const subject = 'Bestellbestätigung - Camillo Industries';
+        const htmlBody = `
+            <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #2c3e50;">Bestellbestätigung - Camillo Industries</h2>
+                    
+                    <p>Hallo ${orderData.name},</p>
+                    
+                    <p>vielen Dank für Ihre Bestellung! Wir haben Ihre Bestellung erhalten und werden sie schnellstmöglich bearbeiten.</p>
+                    
+                    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <h3 style="margin-top: 0;">Bestelldetails:</h3>
+                        <p><strong>Farbe:</strong> ${orderData.color}</p>
+                        <p><strong>Menge:</strong> ${orderData.quantity}</p>
+                        <p><strong>Gesamtpreis:</strong> €${orderData.totalPrice.toFixed(2)}</p>
+                        <p><strong>Lieferadresse:</strong><br>
+                        ${orderData.street}<br>
+                        ${orderData.zip} ${orderData.city}</p>
+                    </div>
+                    
+                    <p>Sie erhalten eine weitere E-Mail, sobald Ihre Bestellung versendet wurde.</p>
+                    
+                    <p>Bei Fragen können Sie uns jederzeit kontaktieren.</p>
+                    
+                    <p>Mit freundlichen Grüßen,<br>
+                    <strong>Camillo Industries</strong></p>
+                </div>
+            </body>
+            </html>
+        `;
 
-        const result = await emailjs.send(
-            EMAILJS_CONFIG.serviceId,
-            EMAILJS_CONFIG.templateIdOrderConfirmation,
-            templateParams
-        );
-        console.log('Bestellbestätigung an Kunden gesendet:', result);
+        const response = await fetch('/api/send-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                to: orderData.email,
+                subject: subject,
+                htmlBody: htmlBody,
+                fromEmail: 'jonathan.simon@camillo-industries.de',
+                fromName: 'Camillo Industries'
+            })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Bestellbestätigung an Kunden gesendet:', result);
+        } else {
+            const error = await response.json();
+            console.error('Fehler beim Senden der Bestellbestätigung:', error);
+        }
     } catch (error) {
         console.error('Fehler beim Senden der Bestellbestätigung:', error);
         // E-Mail-Fehler sollen den Bestellprozess nicht blockieren
     }
 }
 
-// E-Mail an Admin senden (Neue Bestellung Benachrichtigung)
+// Zoho Mail API - E-Mail an Admin senden (Neue Bestellung Benachrichtigung)
 async function sendOrderNotificationEmail(orderData, paymentMethod) {
-    if (!EMAILJS_CONFIG || !EMAILJS_CONFIG.serviceId || !EMAILJS_CONFIG.templateIdAdminNotification || typeof emailjs === 'undefined') {
-        console.warn('EmailJS nicht konfiguriert - E-Mail wird nicht gesendet', {
-            hasConfig: !!EMAILJS_CONFIG,
-            hasServiceId: !!EMAILJS_CONFIG?.serviceId,
-            hasTemplateId: !!EMAILJS_CONFIG?.templateIdAdminNotification,
-            hasEmailJS: typeof emailjs !== 'undefined'
-        });
-        return;
-    }
-
     try {
-        const templateParams = {
-            name: orderData.name,
-            customer_email: orderData.email,
-            street: orderData.street,
-            zip: orderData.zip,
-            city: orderData.city,
-            color: orderData.color,
-            quantity: orderData.quantity,
-            total_price: orderData.totalPrice.toFixed(2),
-            payment_method: paymentMethod
-        };
+        const subject = 'Neue Bestellung eingegangen';
+        const htmlBody = `
+            <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #2c3e50;">Neue Bestellung eingegangen</h2>
+                    
+                    <p>Eine neue Bestellung wurde auf der Website aufgegeben:</p>
+                    
+                    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <h3 style="margin-top: 0;">Bestelldetails:</h3>
+                        <p><strong>Name:</strong> ${orderData.name}</p>
+                        <p><strong>E-Mail:</strong> ${orderData.email}</p>
+                        <p><strong>Adresse:</strong><br>
+                        ${orderData.street}<br>
+                        ${orderData.zip} ${orderData.city}</p>
+                        <p><strong>Farbe:</strong> ${orderData.color}</p>
+                        <p><strong>Menge:</strong> ${orderData.quantity}</p>
+                        <p><strong>Gesamtpreis:</strong> €${orderData.totalPrice.toFixed(2)}</p>
+                        <p><strong>Zahlungsmethode:</strong> ${paymentMethod}</p>
+                    </div>
+                    
+                    <p>Bitte bearbeiten Sie die Bestellung im Bestellungen-Manager.</p>
+                </div>
+            </body>
+            </html>
+        `;
 
-        const result = await emailjs.send(
-            EMAILJS_CONFIG.serviceId,
-            EMAILJS_CONFIG.templateIdAdminNotification,
-            templateParams
-        );
-        console.log('Bestellbenachrichtigung an Admin gesendet:', result);
+        const response = await fetch('/api/send-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                to: 'jonathan@camillo-industries.de',
+                subject: subject,
+                htmlBody: htmlBody,
+                fromEmail: 'jonathan.simon@camillo-industries.de',
+                fromName: 'Camillo Industries Shop'
+            })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Bestellbenachrichtigung an Admin gesendet:', result);
+        } else {
+            const error = await response.json();
+            console.error('Fehler beim Senden der Admin-Benachrichtigung:', error);
+        }
     } catch (error) {
         console.error('Fehler beim Senden der Admin-Benachrichtigung:', error);
         // E-Mail-Fehler sollen den Bestellprozess nicht blockieren
@@ -354,7 +389,6 @@ async function saveOrderToSupabase(orderData, paymentMethod, transactionId) {
         console.log('Bestellung erfolgreich gespeichert:', data);
         
         // E-Mails senden (nicht blockierend)
-        initEmailJS();
         sendOrderConfirmationEmail(orderData).catch(err => console.error('E-Mail Fehler:', err));
         sendOrderNotificationEmail(orderData, paymentMethod).catch(err => console.error('E-Mail Fehler:', err));
         

@@ -13,7 +13,7 @@ import threading
 from datetime import datetime
 from typing import List, Dict, Optional
 from collections import Counter
-from emailjs_sender import EmailJSSender
+from zoho_mail_sender import ZohoMailSender
 
 class BestellungenManager:
     def __init__(self, root):
@@ -41,9 +41,9 @@ class BestellungenManager:
         self.supabase: Optional[Client] = None
         self.init_supabase()
         
-        # EmailJS Sender initialisieren
-        self.emailjs_sender: Optional[EmailJSSender] = None
-        self.init_emailjs()
+        # Zoho Mail Sender initialisieren
+        self.zoho_sender: Optional[ZohoMailSender] = None
+        self.init_zoho_mail()
         
         # Refresh-Thread
         self.refresh_thread = None
@@ -113,24 +113,34 @@ class BestellungenManager:
             messagebox.showerror("Fehler", f"Supabase-Verbindung fehlgeschlagen:\n{str(e)}")
             print(f"Supabase Fehler: {e}")
     
-    def init_emailjs(self):
-        """Initialisiert EmailJS Sender"""
+    def init_zoho_mail(self):
+        """Initialisiert Zoho Mail Sender"""
         try:
-            # TODO: Ersetzen Sie diese Werte mit Ihren EmailJS-Anmeldedaten
-            # Sie finden diese in Ihrem EmailJS Dashboard:
-            # - Public Key: Account → General → Public Key
-            # - Service ID: Email Services → Service ID
-            EMAILJS_PUBLIC_KEY = 'YOUR_EMAILJS_PUBLIC_KEY'
-            EMAILJS_SERVICE_ID = 'YOUR_EMAILJS_SERVICE_ID'
+            # TODO: Ersetzen Sie diese Werte mit Ihren Zoho OAuth-Anmeldedaten
+            # Sie finden diese in der Zoho Developer Console:
+            # - Client ID: Developer Console → Ihre App → Client ID
+            # - Client Secret: Developer Console → Ihre App → Client Secret
+            # - Refresh Token: Nach OAuth-Authentifizierung erhalten
+            ZOHO_CLIENT_ID = 'YOUR_ZOHO_CLIENT_ID'
+            ZOHO_CLIENT_SECRET = 'YOUR_ZOHO_CLIENT_SECRET'
+            ZOHO_REFRESH_TOKEN = 'YOUR_ZOHO_REFRESH_TOKEN'
+            ZOHO_ACCOUNT_ID = '6887007000000002002'  # Optional, wird automatisch ermittelt
             
-            if EMAILJS_PUBLIC_KEY != 'YOUR_EMAILJS_PUBLIC_KEY' and EMAILJS_SERVICE_ID != 'YOUR_EMAILJS_SERVICE_ID':
-                self.emailjs_sender = EmailJSSender(EMAILJS_PUBLIC_KEY, EMAILJS_SERVICE_ID)
-                print("EmailJS Sender erfolgreich initialisiert")
+            if (ZOHO_CLIENT_ID != 'YOUR_ZOHO_CLIENT_ID' and 
+                ZOHO_CLIENT_SECRET != 'YOUR_ZOHO_CLIENT_SECRET' and 
+                ZOHO_REFRESH_TOKEN != 'YOUR_ZOHO_REFRESH_TOKEN'):
+                self.zoho_sender = ZohoMailSender(
+                    ZOHO_CLIENT_ID, 
+                    ZOHO_CLIENT_SECRET, 
+                    ZOHO_REFRESH_TOKEN,
+                    ZOHO_ACCOUNT_ID
+                )
+                print("Zoho Mail Sender erfolgreich initialisiert")
             else:
-                print("EmailJS nicht konfiguriert - E-Mails werden nicht gesendet")
+                print("Zoho Mail nicht konfiguriert - E-Mails werden nicht gesendet")
         except Exception as e:
-            print(f"EmailJS Fehler: {e}")
-            # EmailJS-Fehler sollen das Programm nicht blockieren
+            print(f"Zoho Mail Fehler: {e}")
+            # Zoho Mail-Fehler sollen das Programm nicht blockieren
     
     def toggle_theme(self):
         """Wechselt zwischen Dark und Light Mode"""
@@ -610,10 +620,10 @@ class BestellungenManager:
             
             if response.data:
                 # Versandbestätigungs-E-Mail an Kunden senden
-                if self.emailjs_sender and response.data:
+                if self.zoho_sender and response.data:
                     bestellung = response.data[0]
                     try:
-                        self.emailjs_sender.send_shipping_confirmation(
+                        self.zoho_sender.send_shipping_confirmation(
                             name=bestellung.get('name', ''),
                             email=bestellung.get('email', ''),
                             street=bestellung.get('street', ''),
