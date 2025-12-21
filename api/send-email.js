@@ -16,9 +16,16 @@ export default async function handler(req, res) {
 
     // Nur POST-Requests erlauben
     if (req.method !== 'POST') {
-        res.status(405).json({ error: 'Method not allowed', allowedMethods: ['POST'] });
+        res.status(405).json({ error: 'Method not allowed', allowedMethods: ['POST'], receivedMethod: req.method });
         return;
     }
+
+    // Logging für Debugging
+    console.log('API Request erhalten:', {
+        method: req.method,
+        headers: req.headers,
+        bodyKeys: req.body ? Object.keys(req.body) : 'no body'
+    });
 
     try {
         const { 

@@ -3,12 +3,6 @@
     "api/send-email.js": {
       "maxDuration": 30
     }
-  },
-  "rewrites": [
-    {
-      "source": "/api/send-email",
-      "destination": "/api/send-email"
-    }
-  ]
+  }
 }
 

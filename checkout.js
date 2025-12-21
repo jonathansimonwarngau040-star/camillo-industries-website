@@ -298,12 +298,18 @@ async function sendOrderConfirmationEmail(orderData) {
 
         if (response && response.ok) {
             const result = await response.json();
-            console.log('Bestellbestätigung an Kunden gesendet:', result);
+            console.log('✅ Bestellbestätigung an Kunden gesendet:', result);
         } else if (response) {
-            const error = await response.json().catch(() => ({ error: 'Unknown error', status: response.status }));
-            console.error('Fehler beim Senden der Bestellbestätigung:', error);
+            const errorText = await response.text().catch(() => 'Could not read error response');
+            const error = await response.json().catch(() => ({ error: errorText, status: response.status }));
+            console.error('❌ Fehler beim Senden der Bestellbestätigung:', {
+                status: response.status,
+                statusText: response.statusText,
+                error: error,
+                headers: Object.fromEntries(response.headers.entries())
+            });
         } else {
-            console.error('Keine Response erhalten - API-Route möglicherweise nicht verfügbar');
+            console.error('❌ Keine Response erhalten - API-Route möglicherweise nicht verfügbar');
         }
     } catch (error) {
         console.error('Fehler beim Senden der Bestellbestätigung:', error);
@@ -374,12 +380,18 @@ async function sendOrderNotificationEmail(orderData, paymentMethod) {
 
         if (response && response.ok) {
             const result = await response.json();
-            console.log('Bestellbenachrichtigung an Admin gesendet:', result);
+            console.log('✅ Bestellbenachrichtigung an Admin gesendet:', result);
         } else if (response) {
-            const error = await response.json().catch(() => ({ error: 'Unknown error', status: response.status }));
-            console.error('Fehler beim Senden der Admin-Benachrichtigung:', error);
+            const errorText = await response.text().catch(() => 'Could not read error response');
+            const error = await response.json().catch(() => ({ error: errorText, status: response.status }));
+            console.error('❌ Fehler beim Senden der Admin-Benachrichtigung:', {
+                status: response.status,
+                statusText: response.statusText,
+                error: error,
+                headers: Object.fromEntries(response.headers.entries())
+            });
         } else {
-            console.error('Keine Response erhalten - API-Route möglicherweise nicht verfügbar');
+            console.error('❌ Keine Response erhalten - API-Route möglicherweise nicht verfügbar');
         }
     } catch (error) {
         console.error('Fehler beim Senden der Admin-Benachrichtigung:', error);
