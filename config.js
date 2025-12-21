@@ -18,3 +18,15 @@ const STRIPE_CONFIG = {
     publishableKey: 'YOUR_STRIPE_PUBLISHABLE_KEY' // Ihre Stripe Publishable Key
 };
 
+// EmailJS Konfiguration
+// Sie finden diese Werte in Ihrem EmailJS Dashboard:
+// - Public Key: Account → General → Public Key
+// - Service ID: Email Services → Service ID
+const EMAILJS_CONFIG = {
+    publicKey: 'dunWs0xE-7SoRHl12', // Public Key von EmailJS
+    serviceId: 'service_yw2pqc2',  // Service ID (Zoho)
+    templateIdOrderConfirmation: 'template_8lb79mb', // Bestellbestätigung an Kunden
+    templateIdAdminNotification: 'template_6erk6c6', // Benachrichtigung an jonathan@camillo-industries.de
+    templateIdShippingConfirmation: 'template_7p4973f' // Versandbestätigung an Kunden
+};
+

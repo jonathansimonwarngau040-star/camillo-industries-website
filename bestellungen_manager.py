@@ -13,6 +13,7 @@ import threading
 from datetime import datetime
 from typing import List, Dict, Optional
 from collections import Counter
+from emailjs_sender import EmailJSSender
 
 class BestellungenManager:
     def __init__(self, root):
@@ -39,6 +40,10 @@ class BestellungenManager:
         # Supabase Client initialisieren
         self.supabase: Optional[Client] = None
         self.init_supabase()
+        
+        # EmailJS Sender initialisieren
+        self.emailjs_sender: Optional[EmailJSSender] = None
+        self.init_emailjs()
         
         # Refresh-Thread
         self.refresh_thread = None
@@ -107,6 +112,25 @@ class BestellungenManager:
         except Exception as e:
             messagebox.showerror("Fehler", f"Supabase-Verbindung fehlgeschlagen:\n{str(e)}")
             print(f"Supabase Fehler: {e}")
+    
+    def init_emailjs(self):
+        """Initialisiert EmailJS Sender"""
+        try:
+            # TODO: Ersetzen Sie diese Werte mit Ihren EmailJS-Anmeldedaten
+            # Sie finden diese in Ihrem EmailJS Dashboard:
+            # - Public Key: Account → General → Public Key
+            # - Service ID: Email Services → Service ID
+            EMAILJS_PUBLIC_KEY = 'YOUR_EMAILJS_PUBLIC_KEY'
+            EMAILJS_SERVICE_ID = 'YOUR_EMAILJS_SERVICE_ID'
+            
+            if EMAILJS_PUBLIC_KEY != 'YOUR_EMAILJS_PUBLIC_KEY' and EMAILJS_SERVICE_ID != 'YOUR_EMAILJS_SERVICE_ID':
+                self.emailjs_sender = EmailJSSender(EMAILJS_PUBLIC_KEY, EMAILJS_SERVICE_ID)
+                print("EmailJS Sender erfolgreich initialisiert")
+            else:
+                print("EmailJS nicht konfiguriert - E-Mails werden nicht gesendet")
+        except Exception as e:
+            print(f"EmailJS Fehler: {e}")
+            # EmailJS-Fehler sollen das Programm nicht blockieren
     
     def toggle_theme(self):
         """Wechselt zwischen Dark und Light Mode"""
@@ -579,12 +603,32 @@ class BestellungenManager:
             return
         
         try:
+            # Bestellung in Supabase als versendet markieren
             response = self.supabase.table("bestellungen").update({
                 "versendet": True
             }).eq("id", bestellung_id).execute()
             
             if response.data:
-                self.update_status("Bestellung als versendet markiert")
+                # Versandbestätigungs-E-Mail an Kunden senden
+                if self.emailjs_sender and response.data:
+                    bestellung = response.data[0]
+                    try:
+                        self.emailjs_sender.send_shipping_confirmation(
+                            name=bestellung.get('name', ''),
+                            email=bestellung.get('email', ''),
+                            street=bestellung.get('street', ''),
+                            zip_code=bestellung.get('zip', ''),
+                            city=bestellung.get('city', ''),
+                            color=bestellung.get('color', ''),
+                            quantity=bestellung.get('quantity', 0)
+                        )
+                        self.update_status("Bestellung als versendet markiert und E-Mail gesendet")
+                    except Exception as email_error:
+                        print(f"E-Mail Fehler: {email_error}")
+                        self.update_status("Bestellung als versendet markiert (E-Mail konnte nicht gesendet werden)")
+                else:
+                    self.update_status("Bestellung als versendet markiert")
+                
                 self.refresh_data()
                 messagebox.showinfo("Erfolg", "Bestellung wurde als versendet markiert.")
             else:

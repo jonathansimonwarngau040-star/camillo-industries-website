@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeSupabase();
     initializeCheckoutPage();
     initializePaymentMethods();
+    initEmailJS(); // EmailJS initialisieren
 });
 
 // Supabase initialisieren
@@ -230,6 +231,81 @@ async function processCreditCardPayment(orderData) {
     await saveOrderToSupabase(orderData, 'creditcard', transactionId);
 }
 
+// EmailJS initialisieren
+function initEmailJS() {
+    if (typeof EMAILJS_CONFIG !== 'undefined' && EMAILJS_CONFIG.publicKey && typeof emailjs !== 'undefined') {
+        emailjs.init(EMAILJS_CONFIG.publicKey);
+        console.log('EmailJS initialisiert');
+        return true;
+    } else {
+        console.warn('EmailJS nicht konfiguriert');
+        return false;
+    }
+}
+
+// E-Mail an Kunden senden (Bestellbestätigung)
+async function sendOrderConfirmationEmail(orderData) {
+    if (!EMAILJS_CONFIG || !EMAILJS_CONFIG.serviceId || typeof emailjs === 'undefined') {
+        console.warn('EmailJS nicht konfiguriert - E-Mail wird nicht gesendet');
+        return;
+    }
+
+    try {
+        const templateParams = {
+            name: orderData.name,
+            customer_email: orderData.email,
+            color: orderData.color,
+            quantity: orderData.quantity,
+            total_price: orderData.totalPrice.toFixed(2),
+            street: orderData.street,
+            zip: orderData.zip,
+            city: orderData.city
+        };
+
+        await emailjs.send(
+            EMAILJS_CONFIG.serviceId,
+            'order_confirmation_customer',
+            templateParams
+        );
+        console.log('Bestellbestätigung an Kunden gesendet');
+    } catch (error) {
+        console.error('Fehler beim Senden der Bestellbestätigung:', error);
+        // E-Mail-Fehler sollen den Bestellprozess nicht blockieren
+    }
+}
+
+// E-Mail an Admin senden (Neue Bestellung Benachrichtigung)
+async function sendOrderNotificationEmail(orderData, paymentMethod) {
+    if (!EMAILJS_CONFIG || !EMAILJS_CONFIG.serviceId || typeof emailjs === 'undefined') {
+        console.warn('EmailJS nicht konfiguriert - E-Mail wird nicht gesendet');
+        return;
+    }
+
+    try {
+        const templateParams = {
+            name: orderData.name,
+            customer_email: orderData.email,
+            street: orderData.street,
+            zip: orderData.zip,
+            city: orderData.city,
+            color: orderData.color,
+            quantity: orderData.quantity,
+            total_price: orderData.totalPrice.toFixed(2),
+            payment_method: paymentMethod
+        };
+
+        await emailjs.send(
+            EMAILJS_CONFIG.serviceId,
+            'order_notification_admin',
+            templateParams
+        );
+        console.log('Bestellbenachrichtigung an Admin gesendet');
+    } catch (error) {
+        console.error('Fehler beim Senden der Admin-Benachrichtigung:', error);
+        // E-Mail-Fehler sollen den Bestellprozess nicht blockieren
+    }
+}
+
 // Bestellung in Supabase speichern
 async function saveOrderToSupabase(orderData, paymentMethod, transactionId) {
     if (!supabaseClient) {
@@ -266,6 +342,11 @@ async function saveOrderToSupabase(orderData, paymentMethod, transactionId) {
         }
 
         console.log('Bestellung erfolgreich gespeichert:', data);
+        
+        // E-Mails senden (nicht blockierend)
+        initEmailJS();
+        sendOrderConfirmationEmail(orderData).catch(err => console.error('E-Mail Fehler:', err));
+        sendOrderNotificationEmail(orderData, paymentMethod).catch(err => console.error('E-Mail Fehler:', err));
         
         // Bestelldaten für die Dankeseite speichern
         localStorage.setItem('orderData', JSON.stringify({
