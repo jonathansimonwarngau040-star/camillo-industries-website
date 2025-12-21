@@ -245,8 +245,13 @@ function initEmailJS() {
 
 // E-Mail an Kunden senden (Bestellbestätigung)
 async function sendOrderConfirmationEmail(orderData) {
-    if (!EMAILJS_CONFIG || !EMAILJS_CONFIG.serviceId || typeof emailjs === 'undefined') {
-        console.warn('EmailJS nicht konfiguriert - E-Mail wird nicht gesendet');
+    if (!EMAILJS_CONFIG || !EMAILJS_CONFIG.serviceId || !EMAILJS_CONFIG.templateIdOrderConfirmation || typeof emailjs === 'undefined') {
+        console.warn('EmailJS nicht konfiguriert - E-Mail wird nicht gesendet', {
+            hasConfig: !!EMAILJS_CONFIG,
+            hasServiceId: !!EMAILJS_CONFIG?.serviceId,
+            hasTemplateId: !!EMAILJS_CONFIG?.templateIdOrderConfirmation,
+            hasEmailJS: typeof emailjs !== 'undefined'
+        });
         return;
     }
 
@@ -262,12 +267,12 @@ async function sendOrderConfirmationEmail(orderData) {
             city: orderData.city
         };
 
-        await emailjs.send(
+        const result = await emailjs.send(
             EMAILJS_CONFIG.serviceId,
-            'order_confirmation_customer',
+            EMAILJS_CONFIG.templateIdOrderConfirmation,
             templateParams
         );
-        console.log('Bestellbestätigung an Kunden gesendet');
+        console.log('Bestellbestätigung an Kunden gesendet:', result);
     } catch (error) {
         console.error('Fehler beim Senden der Bestellbestätigung:', error);
         // E-Mail-Fehler sollen den Bestellprozess nicht blockieren
@@ -276,8 +281,13 @@ async function sendOrderConfirmationEmail(orderData) {
 
 // E-Mail an Admin senden (Neue Bestellung Benachrichtigung)
 async function sendOrderNotificationEmail(orderData, paymentMethod) {
-    if (!EMAILJS_CONFIG || !EMAILJS_CONFIG.serviceId || typeof emailjs === 'undefined') {
-        console.warn('EmailJS nicht konfiguriert - E-Mail wird nicht gesendet');
+    if (!EMAILJS_CONFIG || !EMAILJS_CONFIG.serviceId || !EMAILJS_CONFIG.templateIdAdminNotification || typeof emailjs === 'undefined') {
+        console.warn('EmailJS nicht konfiguriert - E-Mail wird nicht gesendet', {
+            hasConfig: !!EMAILJS_CONFIG,
+            hasServiceId: !!EMAILJS_CONFIG?.serviceId,
+            hasTemplateId: !!EMAILJS_CONFIG?.templateIdAdminNotification,
+            hasEmailJS: typeof emailjs !== 'undefined'
+        });
         return;
     }
 
@@ -294,12 +304,12 @@ async function sendOrderNotificationEmail(orderData, paymentMethod) {
             payment_method: paymentMethod
         };
 
-        await emailjs.send(
+        const result = await emailjs.send(
             EMAILJS_CONFIG.serviceId,
-            'order_notification_admin',
+            EMAILJS_CONFIG.templateIdAdminNotification,
             templateParams
         );
-        console.log('Bestellbenachrichtigung an Admin gesendet');
+        console.log('Bestellbenachrichtigung an Admin gesendet:', result);
     } catch (error) {
         console.error('Fehler beim Senden der Admin-Benachrichtigung:', error);
         // E-Mail-Fehler sollen den Bestellprozess nicht blockieren
