@@ -100,7 +100,7 @@ let paypalButtonsInstance = null;
 
 // Zahlungsmethoden initialisieren
 function initializePaymentMethods() {
-    const paypalRadio = document.getElementById('paypal');
+    const paypalRadio = document.getElementById('payment-paypal');
     const creditCardRadio = document.getElementById('creditcard');
     const creditCardFields = document.getElementById('creditCardFields');
     const checkoutForm = document.getElementById('checkoutForm');
