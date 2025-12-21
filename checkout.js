@@ -308,37 +308,23 @@ function renderPayPalButtons() {
     const subtotal = unitPrice * quantity;
     const totalPrice = subtotal + shippingCost;
 
-    paypal.Buttons({
+    const buttonsConfig = {
         style: {
             layout: 'vertical',
             color: 'blue',
             shape: 'rect',
             label: 'paypal'
         },
+        onClick: function(data, actions) {
+            console.log('PayPal Button geklickt!', data);
+            // Erlaube den Klick - Validierung passiert in createOrder
+            return true;
+        },
         createOrder: function(data, actions) {
-            // Formular validieren, bevor PayPal-Order erstellt wird
-            const formData = new FormData(document.getElementById('checkoutForm'));
+            console.log('PayPal createOrder aufgerufen');
+            console.log('Bestelldaten - Menge:', quantity, 'Gesamtpreis:', totalPrice.toFixed(2));
             
-            // Basis-Validierung
-            const name = formData.get('name');
-            const email = formData.get('email');
-            const street = formData.get('street');
-            const zip = formData.get('zip');
-            const city = formData.get('city');
-
-            if (!name || !email || !street || !zip || !city) {
-                alert('Bitte füllen Sie alle Pflichtfelder aus, bevor Sie mit PayPal bezahlen.');
-                return false; // Order wird nicht erstellt
-            }
-
-            // Email-Validierung
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                alert('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
-                return false;
-            }
-
-            // Order erstellen
+            // Order erstellen (Formular-Validierung erfolgt in onApprove, bevor die Bestellung gespeichert wird)
             return actions.order.create({
                 purchase_units: [{
                     description: 'Premium Eiskratzer - Camillo Industries',
@@ -369,16 +355,45 @@ function renderPayPalButtons() {
                 application_context: {
                     shipping_preference: 'NO_SHIPPING' // Adresse bereits im Formular erfasst
                 }
+            }).then(function(orderId) {
+                console.log('PayPal Order erstellt:', orderId);
+                return orderId;
+            }).catch(function(error) {
+                console.error('Fehler beim Erstellen der PayPal Order:', error);
+                alert('Fehler beim Erstellen der Bestellung. Bitte versuchen Sie es erneut.');
+                throw error;
             });
         },
         onApprove: async function(data, actions) {
+            console.log('PayPal onApprove aufgerufen, Order ID:', data.orderID);
             try {
+                // Formular validieren, bevor Zahlung verarbeitet wird
+                const formData = new FormData(document.getElementById('checkoutForm'));
+                const name = formData.get('name');
+                const email = formData.get('email');
+                const street = formData.get('street');
+                const zip = formData.get('zip');
+                const city = formData.get('city');
+
+                if (!name || !email || !street || !zip || !city) {
+                    alert('Bitte füllen Sie alle Pflichtfelder aus. Die Zahlung wurde abgebrochen.');
+                    // Zahlung abbrechen - PayPal wird den User zurück zur Seite bringen
+                    throw new Error('Formular nicht vollständig ausgefüllt');
+                }
+
+                // Email-Validierung
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    alert('Bitte geben Sie eine gültige E-Mail-Adresse ein. Die Zahlung wurde abgebrochen.');
+                    throw new Error('Ungültige E-Mail-Adresse');
+                }
+
                 // Order Details abrufen
+                console.log('Capturing PayPal Order...');
                 const orderDetails = await actions.order.capture();
-                console.log('PayPal Zahlung erfolgreich:', orderDetails);
+                console.log('✅ PayPal Zahlung erfolgreich:', orderDetails);
 
                 // Bestelldaten sammeln
-                const formData = new FormData(document.getElementById('checkoutForm'));
                 const orderData = collectOrderData(formData);
 
                 // Transaction ID aus PayPal Response extrahieren
@@ -392,24 +407,46 @@ function renderPayPalButtons() {
             }
         },
         onError: function(err) {
-            console.error('PayPal Fehler:', err);
-            alert('Es gab einen Fehler mit PayPal. Bitte versuchen Sie es erneut oder wählen Sie eine andere Zahlungsmethode.');
+            console.error('❌ PayPal Fehler:', err);
+            console.error('Fehler-Details:', {
+                message: err.message,
+                name: err.name,
+                stack: err.stack
+            });
+            alert('Es gab einen Fehler mit PayPal: ' + (err.message || 'Unbekannter Fehler') + '. Bitte versuchen Sie es erneut oder wählen Sie eine andere Zahlungsmethode.');
         },
         onCancel: function(data) {
             console.log('PayPal Zahlung abgebrochen:', data);
             // Benutzer kann erneut versuchen oder andere Zahlungsmethode wählen
         }
-    });
+    };
+    
+    const buttons = paypal.Buttons(buttonsConfig);
 
     // Buttons rendern und Instanz speichern
     try {
+        console.log('Rendere PayPal Buttons in Container...');
         paypalButtonsInstance = buttons;
-        buttons.render('#paypal-button-container');
-        console.log('PayPal Buttons erfolgreich gerendert');
+        const renderResult = buttons.render('#paypal-button-container');
+        console.log('✅ PayPal Buttons erfolgreich gerendert');
+        
+        // Prüfen ob Buttons tatsächlich gerendert wurden
+        setTimeout(function() {
+            const buttonElements = paypalButtonContainer.querySelectorAll('[data-paypal-button]');
+            if (buttonElements.length === 0) {
+                console.warn('⚠️ PayPal Buttons wurden möglicherweise nicht gerendert - keine Button-Elemente gefunden');
+            } else {
+                console.log('✅ PayPal Button-Elemente gefunden:', buttonElements.length);
+            }
+        }, 1000);
+        
     } catch (error) {
-        console.error('Fehler beim Rendern der PayPal Buttons:', error);
+        console.error('❌ Fehler beim Rendern der PayPal Buttons:', error);
         paypalButtonContainer.innerHTML = '<p style="color: #d32f2f;">Fehler beim Anzeigen des PayPal-Buttons. Bitte laden Sie die Seite neu.</p>';
-        document.getElementById('standardSubmitButton').style.display = 'block';
+        const submitButton = document.getElementById('standardSubmitButton');
+        if (submitButton) {
+            submitButton.style.display = 'block';
+        }
     }
 }
 
