@@ -266,31 +266,66 @@ async function sendOrderConfirmationEmail(orderData) {
             </html>
         `;
 
-        // API-URL bestimmen (funktioniert auf beiden Domains)
-        const apiUrl = '/api/send-email';
+        // API-URL bestimmen - verwende absolute URL für bessere Kompatibilität
+        // Fallback auf Vercel-URL, falls Custom Domain die API-Route nicht unterstützt
+        let apiUrl;
+        if (window.location.hostname.includes('camillo-industries.de')) {
+            // Custom Domain - versuche erst Custom Domain, dann Vercel
+            apiUrl = `${window.location.origin}/api/send-email`;
+        } else {
+            apiUrl = `${window.location.origin}/api/send-email`;
+        }
         console.log('Sende E-Mail über API:', apiUrl, 'von:', window.location.origin);
         
         let response;
         try {
-            response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    to: orderData.email,
-                    subject: subject,
-                    htmlBody: htmlBody,
-                    fromEmail: 'jonathan.simon@camillo-industries.de',
-                    fromName: 'Camillo Industries'
-                })
-            });
+            const requestBody = {
+                to: orderData.email,
+                subject: subject,
+                htmlBody: htmlBody,
+                fromEmail: 'jonathan.simon@camillo-industries.de',
+                fromName: 'Camillo Industries'
+            };
+            
+            console.log('Sende Request an:', apiUrl);
+            console.log('Request Body Keys:', Object.keys(requestBody));
+            
+            // Versuche erst Custom Domain, dann Fallback auf Vercel
+            const vercelApiUrl = 'https://camillo-industries-website.vercel.app/api/send-email';
+            
+            try {
+                response = await fetch(apiUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                console.log('Response erhalten:', response.status, response.statusText);
+            } catch (primaryError) {
+                console.warn('Primary API-URL fehlgeschlagen, versuche Fallback:', primaryError.message);
+                // Fallback auf Vercel-URL
+                response = await fetch(vercelApiUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                console.log('Fallback Response erhalten:', response.status, response.statusText);
+            }
         } catch (fetchError) {
             console.error('Fetch-Fehler beim Senden der Bestellbestätigung:', fetchError);
             console.error('Fehler-Details:', {
                 message: fetchError.message,
                 name: fetchError.name,
-                stack: fetchError.stack
+                stack: fetchError.stack,
+                apiUrl: apiUrl
             });
             // E-Mail-Fehler sollen den Bestellprozess nicht blockieren
             return;
@@ -348,31 +383,66 @@ async function sendOrderNotificationEmail(orderData, paymentMethod) {
             </html>
         `;
 
-        // API-URL bestimmen (funktioniert auf beiden Domains)
-        const apiUrl = '/api/send-email';
+        // API-URL bestimmen - verwende absolute URL für bessere Kompatibilität
+        // Fallback auf Vercel-URL, falls Custom Domain die API-Route nicht unterstützt
+        let apiUrl;
+        if (window.location.hostname.includes('camillo-industries.de')) {
+            // Custom Domain - versuche erst Custom Domain, dann Vercel
+            apiUrl = `${window.location.origin}/api/send-email`;
+        } else {
+            apiUrl = `${window.location.origin}/api/send-email`;
+        }
         console.log('Sende Admin-Benachrichtigung über API:', apiUrl, 'von:', window.location.origin);
         
         let response;
         try {
-            response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    to: 'jonathan@camillo-industries.de',
-                    subject: subject,
-                    htmlBody: htmlBody,
-                    fromEmail: 'jonathan.simon@camillo-industries.de',
-                    fromName: 'Camillo Industries Shop'
-                })
-            });
+            const requestBody = {
+                to: 'jonathan@camillo-industries.de',
+                subject: subject,
+                htmlBody: htmlBody,
+                fromEmail: 'jonathan.simon@camillo-industries.de',
+                fromName: 'Camillo Industries Shop'
+            };
+            
+            console.log('Sende Admin-Request an:', apiUrl);
+            console.log('Request Body Keys:', Object.keys(requestBody));
+            
+            // Versuche erst Custom Domain, dann Fallback auf Vercel
+            const vercelApiUrl = 'https://camillo-industries-website.vercel.app/api/send-email';
+            
+            try {
+                response = await fetch(apiUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                console.log('Admin Response erhalten:', response.status, response.statusText);
+            } catch (primaryError) {
+                console.warn('Primary API-URL fehlgeschlagen, versuche Fallback:', primaryError.message);
+                // Fallback auf Vercel-URL
+                response = await fetch(vercelApiUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                console.log('Fallback Admin Response erhalten:', response.status, response.statusText);
+            }
         } catch (fetchError) {
             console.error('Fetch-Fehler beim Senden der Admin-Benachrichtigung:', fetchError);
             console.error('Fehler-Details:', {
                 message: fetchError.message,
                 name: fetchError.name,
-                stack: fetchError.stack
+                stack: fetchError.stack,
+                apiUrl: apiUrl
             });
             // E-Mail-Fehler sollen den Bestellprozess nicht blockieren
             return;

@@ -2,11 +2,19 @@
 // Sendet E-Mails über die Zoho Mail API
 
 export default async function handler(req, res) {
-    // CORS-Header setzen (immer zuerst)
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+    // CORS-Header setzen (IMMER zuerst, bevor irgendwelche Responses gesendet werden)
+    const headers = {
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET,OPTIONS,PATCH,DELETE,POST,PUT',
+        'Access-Control-Allow-Headers': 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version',
+        'Access-Control-Max-Age': '86400'
+    };
+    
+    // Alle CORS-Header setzen
+    Object.keys(headers).forEach(key => {
+        res.setHeader(key, headers[key]);
+    });
 
     // OPTIONS-Request für Preflight handhaben
     if (req.method === 'OPTIONS') {
