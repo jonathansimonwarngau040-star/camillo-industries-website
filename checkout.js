@@ -871,18 +871,29 @@ async function saveOrderToSupabase(orderData, paymentMethod, transactionId, paym
         console.warn('Supabase nicht initialisiert – Bestellung wird nur per E-Mail gemeldet.');
     }
 
-    // 2. E-Mails senden und abwarten, damit die Weiterleitung sie nicht abbricht
-    orderData.transactionId = transactionId;
-    await Promise.allSettled([
-        sendOrderConfirmationEmail(orderData),
-        sendOrderNotificationEmail(orderData, paymentMethod)
-    ]);
+    // 2. E-Mails senden und abwarten (max. 15 Sekunden), damit die Weiterleitung sie nicht abbricht
+    try {
+        orderData.transactionId = transactionId;
+        await Promise.race([
+            Promise.allSettled([
+                sendOrderConfirmationEmail(orderData),
+                sendOrderNotificationEmail(orderData, paymentMethod)
+            ]),
+            new Promise(resolve => setTimeout(resolve, 15000))
+        ]);
+    } catch (error) {
+        console.error('Fehler beim E-Mail-Versand:', error);
+    }
 
-    // 3. Bestelldaten für die Dankeseite speichern und weiterleiten
-    localStorage.setItem('orderData', JSON.stringify({
-        ...orderData,
-        orderId: orderId,
-        transactionId: transactionId
-    }));
+    // 3. Bestelldaten für die Dankeseite speichern und immer weiterleiten
+    try {
+        localStorage.setItem('orderData', JSON.stringify({
+            ...orderData,
+            orderId: orderId,
+            transactionId: transactionId
+        }));
+    } catch (error) {
+        console.error('Konnte Bestelldaten nicht lokal speichern:', error);
+    }
     window.location.href = 'danke.html';
 }
