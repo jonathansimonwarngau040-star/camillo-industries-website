@@ -731,9 +731,10 @@ async function sendOrderNotificationEmail(orderData, paymentMethod) {
                         <p><strong>Menge:</strong> ${orderData.quantity}</p>
                         <p><strong>Gesamtpreis:</strong> €${orderData.totalPrice.toFixed(2)}</p>
                         <p><strong>Zahlungsmethode:</strong> ${paymentMethod}</p>
+                        <p><strong>PayPal-Transaktions-ID:</strong> ${orderData.transactionId || '-'}</p>
                     </div>
                     
-                    <p>Bitte bearbeiten Sie die Bestellung im Bestellungen-Manager.</p>
+                    <p>Bitte bearbeiten Sie die Bestellung.</p>
                 </div>
             </body>
             </html>
@@ -825,60 +826,74 @@ async function sendOrderNotificationEmail(orderData, paymentMethod) {
     }
 }
 
-// Bestellung in Supabase speichern
+// Bestellung abschließen: E-Mails senden, optional in Supabase speichern, zur Dankeseite
+// Supabase ist optional – fällt es aus, gehen die E-Mails trotzdem raus.
 async function saveOrderToSupabase(orderData, paymentMethod, transactionId, paymentStatus = 'pending') {
-    if (!supabaseClient) {
-        throw new Error('Supabase Client nicht initialisiert. Bitte überprüfen Sie Ihre Konfiguration.');
+    let orderId = null;
+
+    // 1. Versuchen, in Supabase zu speichern (Fehler blockieren die Bestellung nicht)
+    if (supabaseClient) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('bestellungen')
+                .insert([
+                    {
+                        name: orderData.name,
+                        email: orderData.email,
+                        street: orderData.street,
+                        zip: orderData.zip,
+                        city: orderData.city,
+                        color: orderData.color,
+                        produkttyp: orderData.produkttyp || 'Eiskratzer',
+                        quantity: orderData.quantity,
+                        unit_price: orderData.unitPrice,
+                        shipping_cost: orderData.shippingCost,
+                        total_price: orderData.totalPrice,
+                        payment_method: paymentMethod,
+                        payment_status: paymentStatus,
+                        payment_transaction_id: transactionId,
+                        order_status: 'pending',
+                        versendet: false
+                    }
+                ])
+                .select();
+
+            if (error) {
+                console.error('Supabase Fehler (Bestellung wird trotzdem abgeschlossen):', error);
+            } else {
+                orderId = data && data[0] ? data[0].id : null;
+                console.log('Bestellung in Supabase gespeichert:', data);
+            }
+        } catch (error) {
+            console.error('Supabase nicht erreichbar (Bestellung wird trotzdem abgeschlossen):', error);
+        }
+    } else {
+        console.warn('Supabase nicht initialisiert – Bestellung wird nur per E-Mail gemeldet.');
     }
 
+    // 2. E-Mails senden und abwarten (max. 15 Sekunden), damit die Weiterleitung sie nicht abbricht
     try {
-        const { data, error } = await supabaseClient
-            .from('bestellungen')
-            .insert([
-                {
-                    name: orderData.name,
-                    email: orderData.email,
-                    street: orderData.street,
-                    zip: orderData.zip,
-                    city: orderData.city,
-                    color: orderData.color,
-                    produkttyp: orderData.produkttyp || 'Eiskratzer', // Produkttyp hinzufügen
-                    quantity: orderData.quantity,
-                    unit_price: orderData.unitPrice,
-                    shipping_cost: orderData.shippingCost,
-                    total_price: orderData.totalPrice,
-                    payment_method: paymentMethod,
-                    payment_status: paymentStatus, // 'completed' für erfolgreiche PayPal-Zahlungen, 'pending' für andere
-                    payment_transaction_id: transactionId,
-                    order_status: 'pending',
-                    versendet: false // Standardmäßig noch nicht versendet
-                }
-            ])
-            .select();
+        orderData.transactionId = transactionId;
+        await Promise.race([
+            Promise.allSettled([
+                sendOrderConfirmationEmail(orderData),
+                sendOrderNotificationEmail(orderData, paymentMethod)
+            ]),
+            new Promise(resolve => setTimeout(resolve, 15000))
+        ]);
+    } catch (error) {
+        console.error('Fehler beim E-Mail-Versand:', error);
+    }
 
-        if (error) {
-            console.error('Supabase Fehler:', error);
-            throw new Error('Fehler beim Speichern der Bestellung: ' + error.message);
-        }
-
-        console.log('Bestellung erfolgreich gespeichert:', data);
-        
-        // E-Mails senden (nicht blockierend)
-        sendOrderConfirmationEmail(orderData).catch(err => console.error('E-Mail Fehler:', err));
-        sendOrderNotificationEmail(orderData, paymentMethod).catch(err => console.error('E-Mail Fehler:', err));
-        
-        // Bestelldaten für die Dankeseite speichern
+    // 3. Bestelldaten für die Dankeseite speichern und immer weiterleiten
+    try {
         localStorage.setItem('orderData', JSON.stringify({
             ...orderData,
-            orderId: data[0].id,
+            orderId: orderId,
             transactionId: transactionId
         }));
-
-        // Zur Dankeseite weiterleiten
-        window.location.href = 'danke.html';
     } catch (error) {
-        console.error('Fehler beim Speichern in Supabase:', error);
-        throw error;
+        console.error('Konnte Bestelldaten nicht lokal speichern:', error);
     }
+    window.location.href = 'danke.html';
 }
-
