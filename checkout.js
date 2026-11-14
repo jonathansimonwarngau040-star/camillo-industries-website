@@ -117,6 +117,59 @@ function initializePaymentMethods() {
         alert('Bitte verwenden Sie den PayPal-Button, um mit PayPal zu bezahlen.');
         return false;
     });
+
+    initializeTestOrder(standardSubmitButton);
+}
+
+// Testbestellung: bestimmter Code im PLZ-Feld überspringt die Bezahlung.
+// Der Code steht nicht im Klartext hier, sondern nur als SHA-256-Hash.
+const TEST_ORDER_HASH = 'cd4cccd0a88db63368003eadba57c9007d9c5681062d3811b3473c9f033a9453';
+
+async function sha256Hex(text) {
+    const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function initializeTestOrder(standardSubmitButton) {
+    const zipInput = document.getElementById('zip');
+    if (!zipInput || !standardSubmitButton || !window.crypto || !crypto.subtle) return;
+
+    let testModeActive = false;
+
+    zipInput.addEventListener('input', async function() {
+        const hash = await sha256Hex(zipInput.value.trim());
+        testModeActive = hash === TEST_ORDER_HASH;
+        standardSubmitButton.style.display = testModeActive ? 'block' : 'none';
+        standardSubmitButton.textContent = 'Testbestellung auslösen (ohne Bezahlung)';
+    });
+
+    standardSubmitButton.addEventListener('click', async function(e) {
+        e.preventDefault();
+        if (!testModeActive) return;
+
+        const formData = new FormData(document.getElementById('checkoutForm'));
+        const name = formData.get('name');
+        const email = formData.get('email');
+        const street = formData.get('street');
+        const city = formData.get('city');
+        if (!name || !email || !street || !city) {
+            alert('Bitte füllen Sie alle Pflichtfelder aus.');
+            return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            alert('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
+            return;
+        }
+
+        standardSubmitButton.disabled = true;
+        standardSubmitButton.textContent = 'Wird gesendet...';
+
+        const orderData = collectOrderData(formData);
+        orderData.zip = 'TEST';
+        orderData.paymentMethod = 'TEST (nicht bezahlt)';
+        const transactionId = 'test-' + Date.now();
+        await saveOrderToSupabase(orderData, 'TEST (nicht bezahlt)', transactionId, 'test');
+    });
 }
 
 // Formular validieren
